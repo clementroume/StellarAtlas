@@ -1,17 +1,18 @@
-import { HttpHandlerFn, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
-import { environment } from '../../../environments/environment';
+import {HttpHandlerFn, HttpInterceptorFn, HttpRequest} from '@angular/common/http';
+import {environment} from '../../../environments/environment';
 
+const baseApiUrl = `${environment.apiUrl}/api/v1`;
 /**
  * Checks if a URL targets the backend API.
  * @param url The request URL.
  */
-const isApiUrl = (url: string): boolean => url.startsWith(`${environment.apiUrl}/api/v1`);
+const isApiUrl = (url: string): boolean => url.startsWith(baseApiUrl);
 
 /**
  * Checks if a URL targets an authentication endpoint.
  * @param url The request URL.
  */
-const isAuthUrl = (url: string): boolean => /\/api\/v1\/auth\//.test(url);
+const isAuthUrl = (url: string): boolean => url.startsWith(`${baseApiUrl}/auth/`);
 
 /**
  * Checks if an HTTP method is one that typically modifies state on the server.
@@ -53,7 +54,7 @@ export const csrfInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, ne
     const token = readCookie('XSRF-TOKEN');
     if (token && !req.headers.has('X-XSRF-TOKEN')) {
       // Clone the request and add the CSRF header.
-      const modifiedReq = req.clone({ setHeaders: { 'X-XSRF-TOKEN': token } });
+      const modifiedReq = req.clone({setHeaders: {'X-XSRF-TOKEN': token}});
       return next(modifiedReq);
     }
   }

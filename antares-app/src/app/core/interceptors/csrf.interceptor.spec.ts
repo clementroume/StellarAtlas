@@ -1,8 +1,8 @@
-import { TestBed } from '@angular/core/testing';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
-import { csrfInterceptor } from './csrf.interceptor';
-import { environment } from '../../../environments/environment';
+import {TestBed} from '@angular/core/testing';
+import {HttpTestingController, provideHttpClientTesting} from '@angular/common/http/testing';
+import {HttpClient, provideHttpClient, withInterceptors, withNoXsrfProtection} from '@angular/common/http';
+import {csrfInterceptor} from './csrf.interceptor';
+import {environment} from '../../../environments/environment';
 
 describe('csrfInterceptor', () => {
   let httpMock: HttpTestingController;
@@ -22,7 +22,9 @@ describe('csrfInterceptor', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
-        provideHttpClient(withInterceptors([csrfInterceptor])),
+        provideHttpClient(
+          withInterceptors([csrfInterceptor]),
+          withNoXsrfProtection()),
         provideHttpClientTesting(),
       ],
     });
