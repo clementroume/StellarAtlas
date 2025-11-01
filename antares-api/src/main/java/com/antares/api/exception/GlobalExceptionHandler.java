@@ -136,24 +136,6 @@ public class GlobalExceptionHandler {
   }
 
   /**
-   * Handles {@link TooManyRequestsException} and returns a translated 429 Too Many Requests
-   * response.
-   *
-   * @param ex the exception thrown
-   * @param request the HTTP request
-   * @param locale the locale for message translation
-   * @return a standardized error response
-   */
-  @ExceptionHandler(TooManyRequestsException.class)
-  public ResponseEntity<ErrorResponse> handleTooManyRequests(
-      TooManyRequestsException ex, HttpServletRequest request, Locale locale) {
-
-    String message = messageSource.getMessage(ex.getMessageKey(), null, locale);
-
-    return buildErrorResponse(HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests", message, request);
-  }
-
-  /**
    * Handles {@link InvalidTokenException} and returns a translated 401 Unauthorized response.
    *
    * @param ex the exception thrown

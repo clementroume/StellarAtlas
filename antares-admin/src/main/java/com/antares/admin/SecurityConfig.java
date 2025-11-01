@@ -61,7 +61,6 @@ public class SecurityConfig {
                     .permitAll()
                     .dispatcherTypeMatchers(DispatcherType.ASYNC)
                     .permitAll()
-                    // 3. Tout le reste nécessite une authentification
                     .anyRequest()
                     .authenticated())
         .formLogin(

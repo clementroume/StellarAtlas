@@ -1,6 +1,5 @@
 package com.antares.api.controller;
 
-import com.antares.api.annotation.RateLimit;
 import com.antares.api.dto.AuthenticationRequest;
 import com.antares.api.dto.RegisterRequest;
 import com.antares.api.dto.TokenRefreshResponse;
@@ -12,7 +11,6 @@ import com.antares.api.service.JwtService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,7 +40,6 @@ public class AuthenticationController {
    * @return ResponseEntity containing the registered user's details
    */
   @PostMapping("/register")
-  @RateLimit(limit = 5, duration = 10, unit = TimeUnit.MINUTES)
   public ResponseEntity<UserResponse> register(
       @Valid @RequestBody RegisterRequest request, HttpServletResponse response) {
 
@@ -58,7 +55,6 @@ public class AuthenticationController {
    * @return ResponseEntity containing the authenticated user's details
    */
   @PostMapping("/login")
-  @RateLimit(limit = 5, duration = 10, unit = TimeUnit.MINUTES)
   public ResponseEntity<UserResponse> login(
       @Valid @RequestBody AuthenticationRequest request, HttpServletResponse response) {
 
