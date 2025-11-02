@@ -1,0 +1,5 @@
+# This file provides TLS certificates to Traefik for local development.
+tls:
+  certificates:
+    - certFile: /certs/local.crt  # Path inside the container to the self-signed certificate.
+      keyFile: /certs/local.key   # Path inside the container to the self-signed private key.
