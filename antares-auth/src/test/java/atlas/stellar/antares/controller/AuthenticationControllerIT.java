@@ -63,7 +63,7 @@ class AuthenticationControllerIT extends BaseIntegrationTest {
     // When/Then
     mockMvc
         .perform(
-            post("/api/v1/auth/register")
+            post("/antares/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(registerRequest)))
         .andExpect(status().isCreated())
@@ -79,7 +79,7 @@ class AuthenticationControllerIT extends BaseIntegrationTest {
     MvcResult loginResult =
         mockMvc
             .perform(
-                post("/api/v1/auth/login")
+                post("/antares/auth/login")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(loginRequest)))
             .andExpect(status().isOk())
@@ -92,7 +92,7 @@ class AuthenticationControllerIT extends BaseIntegrationTest {
     // (User is authenticated via cookies)
     // When/Then
     mockMvc
-        .perform(get("/api/v1/users/me").cookie(loginCookies).with(csrf()))
+        .perform(get("/antares/users/me").cookie(loginCookies).with(csrf()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.email").value("test.user@example.com"));
 
@@ -101,7 +101,7 @@ class AuthenticationControllerIT extends BaseIntegrationTest {
     // (User is authenticated via cookies)
     // When/Then
     mockMvc
-        .perform(post("/api/v1/auth/logout").cookie(loginCookies).with(csrf()))
+        .perform(post("/antares/auth/logout").cookie(loginCookies).with(csrf()))
         .andExpect(status().isOk())
         .andExpect(cookie().maxAge("stellar_access_token", 0));
   }
@@ -114,7 +114,7 @@ class AuthenticationControllerIT extends BaseIntegrationTest {
         new RegisterRequest("Existing", "User", "existing.user@example.com", "password123");
     mockMvc
         .perform(
-            post("/api/v1/auth/register")
+            post("/antares/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(initialRequest)))
         .andExpect(status().isCreated());
@@ -126,7 +126,7 @@ class AuthenticationControllerIT extends BaseIntegrationTest {
     // Then
     mockMvc
         .perform(
-            post("/api/v1/auth/register")
+            post("/antares/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(conflictRequest)))
         .andExpect(status().isConflict());
@@ -140,7 +140,7 @@ class AuthenticationControllerIT extends BaseIntegrationTest {
         new RegisterRequest("Login", "Test", "login.test@example.com", "correctPassword");
     mockMvc
         .perform(
-            post("/api/v1/auth/register")
+            post("/antares/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(registerRequest)))
         .andExpect(status().isCreated());
@@ -152,7 +152,7 @@ class AuthenticationControllerIT extends BaseIntegrationTest {
     // Then
     mockMvc
         .perform(
-            post("/api/v1/auth/login")
+            post("/antares/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginRequest)))
         .andExpect(status().isUnauthorized());
@@ -163,7 +163,7 @@ class AuthenticationControllerIT extends BaseIntegrationTest {
   void testAccessProtectedResource_withoutCookie_shouldReturnForbidden() throws Exception {
     // Given (No cookie)
     // When/Then
-    mockMvc.perform(get("/api/v1/users/me").with(csrf())).andExpect(status().isForbidden());
+    mockMvc.perform(get("/antares/users/me").with(csrf())).andExpect(status().isForbidden());
   }
 
   @Test
@@ -174,7 +174,7 @@ class AuthenticationControllerIT extends BaseIntegrationTest {
         new RegisterRequest("Refresh", "User", "refresh.user@example.com", "password123");
     mockMvc
         .perform(
-            post("/api/v1/auth/register")
+            post("/antares/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(registerRequest)))
         .andExpect(status().isCreated());
@@ -182,7 +182,7 @@ class AuthenticationControllerIT extends BaseIntegrationTest {
     MvcResult loginResult =
         mockMvc
             .perform(
-                post("/api/v1/auth/login")
+                post("/antares/auth/login")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         objectMapper.writeValueAsString(
@@ -193,7 +193,7 @@ class AuthenticationControllerIT extends BaseIntegrationTest {
 
     // When
     mockMvc
-        .perform(post("/api/v1/auth/refresh-token").cookie(refreshTokenCookie).with(csrf()))
+        .perform(post("/antares/auth/refresh-token").cookie(refreshTokenCookie).with(csrf()))
         // Then
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.accessToken").exists());
@@ -207,7 +207,7 @@ class AuthenticationControllerIT extends BaseIntegrationTest {
 
     // When/Then
     mockMvc
-        .perform(post("/api/v1/auth/refresh-token").cookie(invalidRefreshTokenCookie).with(csrf()))
+        .perform(post("/antares/auth/refresh-token").cookie(invalidRefreshTokenCookie).with(csrf()))
         .andExpect(status().isNotFound());
   }
 }

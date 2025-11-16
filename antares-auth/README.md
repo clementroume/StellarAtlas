@@ -7,7 +7,7 @@ designed to run as a containerized microservice.
 ## Tech Stack
 
 * **Framework**: Spring Boot 3.5
-* **Language**: Java 21
+* **Language**: Java 25
 * **Security**: Spring Security 6 (stateless), JWT (via `jjwt`)
 * **Authentication**: HttpOnly Cookies (Access + Refresh Tokens) & Double-Submit Cookie CSRF
   Protection
@@ -18,7 +18,7 @@ designed to run as a containerized microservice.
 
 ## Prerequisites
 
-* JDK 21
+* JDK 25
 * Docker & Docker Compose
 * A configured `.env` file in the project root (see the root `README.md`).
 
@@ -51,7 +51,7 @@ The image is built as part of the root `docker-compose.yml`.
 
 ```bash
 # From the project root
-docker compose build antares-api
+docker compose build antares-auth
 ```
 
 ## How to Run
@@ -64,9 +64,9 @@ This is the recommended way to develop and debug the API locally.
    `docker-compose.yml` at the project root.
    ```bash
    # From the project root
-   docker compose up -d postgres redis
+   docker compose up -d castor-db pollux-cache
    ```
-2. **Run the Application:** Run the `AntaresApi` main class directly from your IDE (like IntelliJ).
+2. **Run the Application:** Run the `AntaresAuth` main class directly from your IDE.
 
 The API will be available at `http://localhost:8080` (main) and `http://localhost:9090` (actuator).
 
@@ -80,20 +80,18 @@ To run the entire platform (Traefik, Frontend, API, Admin, DB, and Cache), use t
 docker compose up --build -d
 ```
 
-The API will be accessible via the Traefik proxy at `https://antares.local/api/v1`.
-
 ## API Endpoints
 
-The API is versioned under `/api/v1`.
+The API will be accessible via the Traefik proxy at `https://antares.local/antares`.
 
-### Authentication (`/api/v1/auth`)
+### Authentication (`/antares/auth`)
 
 * `POST /register`: Register a new user.
 * `POST /login`: Authenticate and receive HttpOnly session cookies.
 * `POST /logout`: Invalidate session and clear cookies.
 * `POST /refresh-token`: Use the refresh token (cookie) to get a new access token.
 
-### User (`/api/v1/users`)
+### User (`/antares/users`)
 
 * `GET /me`: Get the profile of the currently authenticated user.
 * `PUT /me/profile`: Update the user's first name, last name, or email.
@@ -103,7 +101,7 @@ The API is versioned under `/api/v1`.
 ### API Documentation
 
 When the application is running (in any mode), the OpenAPI (Swagger) documentation is available at:
-**`https://antares.local/swagger-ui.html`** (if using the full stack) or
+**`https://stellar.atlas/swagger-ui.html`** (if using the full stack) or
 `http://localhost:8080/swagger-ui.html` (if running standalone).
 
 Access to the documentation is restricted to users with the `ROLE_ADMIN`.

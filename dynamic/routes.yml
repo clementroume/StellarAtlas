@@ -40,8 +40,8 @@ http:
   #  ROUTERS
   # ===================================================================
   routers:
-    # --- 1. Sirius Router (Frontend) ---
-    sirius-router: # <- RENOMMÉ
+    # --- 1. Sirius-App Router ---
+    sirius-app-router:
       rule: "Host(`stellar.atlas`)"             # Match 'stellar.atlas'.
       entryPoints: [ "websecure" ]              # Use the 'websecure' (HTTPS) entrypoint.
       tls: true                                 # Enable TLS (HTTPS).
@@ -49,46 +49,47 @@ http:
       service: "sirius-app-service"             # Route to the frontend service.
       middlewares: [ "secure-headers" ]         # Apply security headers.
 
-    # --- 2. Antares Routers (Proxy, Dedicated, Swagger) ---
-    antares-proxy-router: # <- RENOMMÉ
-      rule: "Host(`stellar.atlas`) && PathPrefix(`/api`)" # Match 'stellar.atlas/api...'.
-      entryPoints: [ "websecure" ]
-      tls: true
-      priority: 10                              # High priority to catch '/api' before the frontend router.
+    # --- 2. Antares-Auth Router ---
+    antares-auth-router:
+      rule: "Host(`auth.stellar.atlas`)"        # Match dedicated 'auth.stellar.atlas' subdomain.
+      entryPoints: [ "websecure" ]              # Use the 'websecure' (HTTPS) entrypoint.
+      tls: true                                 # Enable TLS (HTTPS).
       service: "antares-auth-service"           # Route to the 'antares-auth' service.
       middlewares: [ "rate-limit-api" ]         # Apply API rate limiting.
 
-    antares-dedicated-router: # <- RENOMMÉ
-      rule: "Host(`api.stellar.atlas`)"         # Match dedicated 'api.stellar.atlas' subdomain.
-      entryPoints: [ "websecure" ]
-      tls: true
-      service: "antares-auth-service"
-      middlewares: [ "rate-limit-api" ]
+    # --- 3. Antares-Auth Proxy Router ---
+    antares-auth-proxy-router:
+      rule: "Host(`stellar.atlas`) && PathPrefix(`/antares`)" # Match 'stellar.atlas/antares...'.
+      entryPoints: [ "websecure" ]              # Use the 'websecure' (HTTPS) entrypoint.
+      tls: true                                 # Enable TLS (HTTPS).
+      priority: 10                              # Higher priority to override the main app router.
+      service: "antares-auth-service"           # Route to the 'antares-auth' service.
+      middlewares: [ "rate-limit-api" ]         # Apply API rate limiting.
 
-    antares-swagger-router: # <- RENOMMÉ
-      # High-priority rule to catch Swagger/OpenAPI paths before the frontend router.
+    # --- 4. Antares-Auth Swagger Router ---
+    antares-auth-swagger-router:
       rule: "Host(`stellar.atlas`) && (PathPrefix(`/swagger-ui`) || PathPrefix(`/v3/api-docs`))"
-      entryPoints: [ "websecure" ]
-      tls: true
-      priority: 10
-      service: "antares-auth-service"
-      middlewares: [ "rate-limit-api" ]
+      entryPoints: [ "websecure" ]              # Use the 'websecure' (HTTPS) entrypoint.
+      tls: true                                 # Enable TLS (HTTPS).
+      priority: 10                              # Higher priority to override the main app router.
+      service: "antares-auth-service"           # Route to the 'antares-auth' service.
+      middlewares: [ "rate-limit-api" ]         # Apply API rate limiting.
 
-    # --- 3. Vega Router (Spring Boot Admin) ---
-    vega-router: # <- RENOMMÉ
+    # --- 5. Vega-Admin Router ---
+    vega-admin-router:
       rule: "Host(`admin.stellar.atlas`)"       # Match 'admin.stellar.atlas'.
-      entryPoints: [ "websecure" ]
-      tls: true
-      service: "vega-admin-service"          # <- CORRIGÉ (pointait vers 'antares-admin-service')
+      entryPoints: [ "websecure" ]              # Use the 'websecure' (HTTPS) entrypoint.
+      tls: true                                 # Enable TLS (HTTPS).
+      service: "vega-admin-service"             # Route to the 'vega-admin' service
       middlewares: [ "rate-limit-admin" ]       # Apply administrative rate limiting.
 
-    # --- 4. Traefik Dashboard Router ---
-    traefik-dashboard-router: # <- RENOMMÉ
-      rule: "Host(`dashboard.stellar.atlas`)"   # Match 'dashboard.stellar.atlas'.
-      entryPoints: [ "websecure" ]
-      tls: true
+    # --- 6. Altair-Proxy Router ---
+    altair-proxy-router:
+      rule: "Host(`proxy.stellar.atlas`)"   # Match 'dashboard.stellar.atlas'.
+      entryPoints: [ "websecure" ]              # Use the 'websecure' (HTTPS) entrypoint.
+      tls: true                                 # Enable TLS (HTTPS).
       service: "api@internal"                   # Route to Traefik's internal API/dashboard service.
-      middlewares:
+      middlewares: # Middleware declaration
         - "dash-auth"                           # Secure with Basic Auth.
         - "rate-limit-admin"                    # Secure with rate limiting.
 
@@ -96,23 +97,20 @@ http:
   #  SERVICES
   # ===================================================================
   services:
-    # --- 1. Frontend Application Service (Sirius) ---
-    sirius-app-service: # <- RENOMMÉ
+    # --- 1. Sirius-App Service ---
+    sirius-app-service:
       loadBalancer:
         servers:
-          # Points to the Nginx container serving the Angular app.
-          - url: "http://sirius-app:80" # <- CORRIGÉ
+          - url: "http://sirius-app:80"
 
-    # --- 2. API Service (Antares) ---
-    antares-auth-service: # <- RENOMMÉ
+    # --- 2. Antares-Auth Service ---
+    antares-auth-service:
       loadBalancer:
         servers:
-          # Points to the Spring Boot API container.
-          - url: "http://antares-auth:8080" # <- CORRIGÉ
+          - url: "http://antares-auth:8080"
 
-    # --- 3. Admin Service (Vega) ---
-    vega-admin-service: # <- RENOMMÉ
+    # --- 3. Vega-Admin Service ---
+    vega-admin-service:
       loadBalancer:
         servers:
-          # Points to the Spring Boot Admin container.
-          - url: "http://vega-admin:9091" # <- CORRIGÉ
+          - url: "http://vega-admin:9091"

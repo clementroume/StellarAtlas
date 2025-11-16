@@ -1,7 +1,7 @@
 import {HttpHandlerFn, HttpInterceptorFn, HttpRequest} from '@angular/common/http';
 import {environment} from '../../../environments/environment';
 
-const baseApiUrl = `${environment.apiUrl}/api/v1`;
+const baseApiUrl = `${environment.authUrl}`;
 /**
  * Checks if a URL targets the backend API.
  * @param url The request URL.

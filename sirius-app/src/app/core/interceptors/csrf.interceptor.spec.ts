@@ -1,13 +1,18 @@
 import {TestBed} from '@angular/core/testing';
 import {HttpTestingController, provideHttpClientTesting} from '@angular/common/http/testing';
-import {HttpClient, provideHttpClient, withInterceptors, withNoXsrfProtection} from '@angular/common/http';
+import {
+  HttpClient,
+  provideHttpClient,
+  withInterceptors,
+  withNoXsrfProtection
+} from '@angular/common/http';
 import {csrfInterceptor} from './csrf.interceptor';
 import {environment} from '../../../environments/environment';
 
 describe('csrfInterceptor', () => {
   let httpMock: HttpTestingController;
   let httpClient: HttpClient;
-  const baseApiUrl = `${environment.apiUrl}/api/v1`;
+  const baseApiUrl = `${environment.authUrl}`;
 
   function setCookie(name: string, value: string) {
     document.cookie = `${name}=${value}`;

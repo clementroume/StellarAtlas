@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
  * controller are protected and require a valid session.
  */
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping("/antares/users")
 @RequiredArgsConstructor
 public class UserController {
 

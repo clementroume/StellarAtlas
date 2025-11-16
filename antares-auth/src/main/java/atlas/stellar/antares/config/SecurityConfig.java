@@ -59,7 +59,7 @@ public class SecurityConfig {
                     .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                     .csrfTokenRequestHandler(requestHandler)
                     // Disable CSRF protection for public auth endpoints and actuators
-                    .ignoringRequestMatchers("/api/v1/auth/**", "/actuator/**"))
+                    .ignoringRequestMatchers("/antares/auth/**", "/actuator/**"))
         .authorizeHttpRequests(
             auth ->
                 auth
@@ -67,7 +67,7 @@ public class SecurityConfig {
                     .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**")
                     .hasRole("ADMIN")
                     // Public endpoints
-                    .requestMatchers("/api/v1/auth/**", "/actuator/**")
+                    .requestMatchers("/antares/auth/**", "/actuator/**")
                     .permitAll()
                     // All other endpoints require authentication
                     .anyRequest()
@@ -97,7 +97,7 @@ public class SecurityConfig {
     configuration.setAllowedOrigins(List.of(this.allowedOrigins));
     configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-XSRF-TOKEN"));
-    configuration.setAllowCredentials(true); // Crucial for sending/receiving cookies
+    configuration.setAllowCredentials(Boolean.TRUE); // Crucial for sending/receiving cookies
 
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", configuration);

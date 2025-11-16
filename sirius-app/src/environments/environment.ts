@@ -9,5 +9,5 @@ export const environment = {
    * The base URL for the backend API.
    * This is used by services like AuthService to construct full endpoint URLs.
    */
-  apiUrl: '',
+  authUrl: '/antares',
 };

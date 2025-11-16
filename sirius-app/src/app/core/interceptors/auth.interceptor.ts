@@ -1,17 +1,22 @@
-import { HttpErrorResponse, HttpHandlerFn, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
-import { inject } from '@angular/core';
-import { Router } from '@angular/router';
-import { catchError, switchMap, throwError } from 'rxjs';
-import { environment } from '../../../environments/environment';
-import { AuthService } from '../services/auth.service';
-import { TokenRefreshResponse } from '../models/user.model';
+import {
+  HttpErrorResponse,
+  HttpHandlerFn,
+  HttpInterceptorFn,
+  HttpRequest
+} from '@angular/common/http';
+import {inject} from '@angular/core';
+import {Router} from '@angular/router';
+import {catchError, switchMap, throwError} from 'rxjs';
+import {environment} from '../../../environments/environment';
+import {AuthService} from '../services/auth.service';
+import {TokenRefreshResponse} from '../models/user.model';
 
 /**
  * Checks if a URL targets the backend API.
  * @param url The request URL.
  * @returns `true` if the URL starts with the configured API URL.
  */
-const isApiUrl = (url: string): boolean => url.startsWith(`${environment.apiUrl}/api/v1`);
+const isApiUrl = (url: string): boolean => url.startsWith(environment.authUrl);
 
 /**
  * Checks if a URL targets an authentication endpoint.
@@ -19,7 +24,7 @@ const isApiUrl = (url: string): boolean => url.startsWith(`${environment.apiUrl}
  * @param url The request URL.
  * @returns `true` if the URL is an authentication endpoint.
  */
-const isAuthUrl = (url: string): boolean => /\/api\/v1\/auth\//.test(url);
+const isAuthUrl = (url: string): boolean => url.startsWith(`${environment.authUrl}/auth/`);
 
 /**
  * A functional interceptor that handles two core authentication responsibilities:
@@ -33,7 +38,7 @@ export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, ne
 
   // Clone the request to add 'withCredentials: true' if it targets the API.
   const authorizedReq = isApiUrl(req.url)
-    ? req.clone({ withCredentials: true })
+    ? req.clone({withCredentials: true})
     : req;
 
   return next(authorizedReq).pipe(
@@ -53,7 +58,7 @@ export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, ne
         catchError((refreshErr: HttpErrorResponse) => {
           // If the refresh fails, log the user out and redirect to the login page.
           authService.logout().subscribe(() => {
-            void router.navigate(['/auth/login'], { queryParams: { returnUrl: router.url } });
+            void router.navigate(['/auth/login'], {queryParams: {returnUrl: router.url}});
           });
           return throwError(() => refreshErr);
         })

@@ -69,7 +69,7 @@ class UserControllerIT extends BaseIntegrationTest {
 
     mockMvc
         .perform(
-            post("/api/v1/auth/register")
+            post("/antares/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(registerRequest)))
         .andExpect(status().isCreated());
@@ -78,7 +78,7 @@ class UserControllerIT extends BaseIntegrationTest {
     MvcResult loginResult =
         mockMvc
             .perform(
-                post("/api/v1/auth/login")
+                post("/antares/auth/login")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(loginRequest)))
             .andExpect(status().isOk())
@@ -98,7 +98,7 @@ class UserControllerIT extends BaseIntegrationTest {
     // When
     mockMvc
         .perform(
-            put("/api/v1/users/me/profile")
+            put("/antares/users/me/profile")
                 .cookie(authCookies)
                 .with(csrf()) // Add CSRF token
                 .contentType(MediaType.APPLICATION_JSON)
@@ -118,7 +118,7 @@ class UserControllerIT extends BaseIntegrationTest {
     // When
     mockMvc
         .perform(
-            patch("/api/v1/users/me/preferences")
+            patch("/antares/users/me/preferences")
                 .cookie(authCookies)
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -140,7 +140,7 @@ class UserControllerIT extends BaseIntegrationTest {
     // When
     mockMvc
         .perform(
-            put("/api/v1/users/me/password")
+            put("/antares/users/me/password")
                 .cookie(authCookies)
                 .with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
@@ -154,7 +154,7 @@ class UserControllerIT extends BaseIntegrationTest {
         new AuthenticationRequest(initialEmail, initialPassword);
     mockMvc
         .perform(
-            post("/api/v1/auth/login")
+            post("/antares/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginWithOldPassword)))
         .andExpect(status().isUnauthorized());
@@ -164,7 +164,7 @@ class UserControllerIT extends BaseIntegrationTest {
         new AuthenticationRequest(initialEmail, newPassword);
     mockMvc
         .perform(
-            post("/api/v1/auth/login")
+            post("/antares/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginWithNewPassword)))
         .andExpect(status().isOk());

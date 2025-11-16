@@ -1,15 +1,10 @@
-import { TestBed } from '@angular/core/testing';
-import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { Router } from '@angular/router';
-import { provideRouter } from '@angular/router';
-import { AuthService } from './auth.service';
-import {
-  AuthenticationRequest,
-  ChangePasswordRequest,
-  User
-} from '../models/user.model';
-import { environment } from '../../../environments/environment';
+import {TestBed} from '@angular/core/testing';
+import {provideHttpClient} from '@angular/common/http';
+import {HttpTestingController, provideHttpClientTesting} from '@angular/common/http/testing';
+import {provideRouter, Router} from '@angular/router';
+import {AuthService} from './auth.service';
+import {AuthenticationRequest, ChangePasswordRequest, User} from '../models/user.model';
+import {environment} from '../../../environments/environment';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -17,7 +12,7 @@ describe('AuthService', () => {
   let router: Router;
   let navigateSpy: jasmine.Spy;
 
-  const base = `${environment.apiUrl}/api/v1`;
+  const base = `${environment.authUrl}`;
 
   const dummyUser: User = {
     id: 1,
@@ -69,7 +64,7 @@ describe('AuthService', () => {
     it('should set user to null on error', () => {
       service.initCurrentUser().subscribe();
       const req = httpMock.expectOne(`${base}/users/me`);
-      req.flush({}, { status: 401, statusText: 'Unauthorized' });
+      req.flush({}, {status: 401, statusText: 'Unauthorized'});
       expect(service.currentUser()).toBeNull();
       expect(service.isAuthenticated()).toBeFalse();
     });
@@ -77,7 +72,7 @@ describe('AuthService', () => {
 
   describe('login', () => {
     it('should POST and set current user', () => {
-      const payload: AuthenticationRequest = { email: 'john.doe@test.com', password: 'secret' };
+      const payload: AuthenticationRequest = {email: 'john.doe@test.com', password: 'secret'};
       service.login(payload).subscribe();
       const req = httpMock.expectOne(`${base}/auth/login`);
       req.flush(dummyUser);
@@ -99,7 +94,7 @@ describe('AuthService', () => {
       (service as any)._currentUser.set(dummyUser);
       service.logout().subscribe();
       const req = httpMock.expectOne(`${base}/auth/logout`);
-      req.flush({}, { status: 500, statusText: 'Server Error' });
+      req.flush({}, {status: 500, statusText: 'Server Error'});
       expect(service.currentUser()).toBeNull();
       expect(navigateSpy).toHaveBeenCalledWith(['/auth/login']);
     });
@@ -107,13 +102,17 @@ describe('AuthService', () => {
 
   describe('changePassword', () => {
     it('should PUT to correct URL and emit null on success', () => {
-      const payload: ChangePasswordRequest = { currentPassword: '1', newPassword: '2', confirmationPassword: '2' };
+      const payload: ChangePasswordRequest = {
+        currentPassword: '1',
+        newPassword: '2',
+        confirmationPassword: '2'
+      };
       service.changePassword(payload).subscribe(res => {
         expect(res).toBeNull();
       });
       const req = httpMock.expectOne(`${base}/users/me/password`);
       expect(req.request.method).toBe('PUT');
-      req.flush(null, { status: 200, statusText: 'OK' });
+      req.flush(null, {status: 200, statusText: 'OK'});
     });
   });
 });

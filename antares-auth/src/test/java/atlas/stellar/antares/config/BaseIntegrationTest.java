@@ -37,7 +37,7 @@ public abstract class BaseIntegrationTest extends SingletonTestContainers {
 
     // Inject dummy security and admin properties for the test environment
     registry.add(
-        "JWT_SECRET",
+        "ANTARES_JWT_SECRET",
         () ->
             "YjQ1ZGRjYjU5YjYwNzZkMWY2MzE4YmFiY2Y4ZjgxMGE0YzY4ZmIwYmZkOTRkMjYxYmVjZGU1Y2Y3YWQyYjQzYw==");
     registry.add("application.admin.default-firstname", () -> "Test");

@@ -1,13 +1,13 @@
 # Defines the infrastructure services for the Antares application stack.
 services:
-  # --- 1. THE TRAEFIK PROXY ---
-  traefik:
+  # --- 1. ALTAIR - THE TRAEFIK PROXY ---
+  altair-proxy:
     image: traefik:v3.5
-    container_name: traefik
+    container_name: altair-proxy
     env_file: ./.env # Load environment variables from .env file.
     environment:
       # Pass auth hash for Traefik dashboard basic auth.
-      - TRAEFIK_DASHBOARD_AUTH=${TRAEFIK_DASHBOARD_AUTH}
+      - TRAEFIK_DASHBOARD_AUTH=${ALTAIR_DASHBOARD_AUTH}
     security_opt:
       - no-new-privileges:true # Prevent privilege escalation.
     ports:
@@ -91,16 +91,16 @@ services:
     image: postgres:16-alpine
     container_name: castor-db
     environment:
-      POSTGRES_DB: "${POSTGRES_DB}"
-      POSTGRES_USER: "${POSTGRES_USER}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${CASTOR_DB}"
+      POSTGRES_USER: "${CASTOR_USER}"
+      POSTGRES_PASSWORD: "${CASTOR_PASSWORD}"
     volumes:
       - castor_data:/var/lib/postgresql/data
     ports:
       - "127.0.0.1:5432:5432" # Bind to localhost only for secure local dev access.
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${CASTOR_USER} -d ${CASTOR_DB}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -111,14 +111,14 @@ services:
     image: redis:7-alpine
     container_name: pollux-cache
     env_file: ./.env
-    command: redis-server --requirepass ${REDIS_PASSWORD}
+    command: redis-server --requirepass ${POLLUX_PASSWORD}
     volumes:
       - pollux_data:/data
     ports:
       - "127.0.0.1:6379:6379" # Bind to localhost only for secure local dev access.
     restart: unless-stopped
     healthcheck:
-      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
+      test: [ "CMD", "redis-cli", "-a", "${POLLUX_PASSWORD}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -129,10 +129,13 @@ services:
 # Defines named volumes for persistent data.
 volumes:
   castor_data:
+    name: castor-data
   pollux_data:
+    name: pollux-data
 
 # --- NETWORK DEFINITION ---
 # Defines the custom bridge network for service communication.
 networks:
   stellar-net:
+    name: stellar-net
     driver: bridge

@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
  * and token refresh.
  */
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/antares/auth")
 @RequiredArgsConstructor
 public class AuthenticationController {
 

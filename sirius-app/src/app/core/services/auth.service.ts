@@ -1,15 +1,23 @@
-import { HttpClient } from '@angular/common/http';
-import { Injectable, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
-import { tap, catchError, of, Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
-import { AuthenticationRequest, RegisterRequest, User, ProfileUpdateRequest, PreferencesUpdateRequest, ChangePasswordRequest, TokenRefreshResponse } from '../models/user.model';
+import {HttpClient} from '@angular/common/http';
+import {computed, inject, Injectable, signal} from '@angular/core';
+import {Router} from '@angular/router';
+import {catchError, Observable, of, tap} from 'rxjs';
+import {environment} from '../../../environments/environment';
+import {
+  AuthenticationRequest,
+  ChangePasswordRequest,
+  PreferencesUpdateRequest,
+  ProfileUpdateRequest,
+  RegisterRequest,
+  TokenRefreshResponse,
+  User
+} from '../models/user.model';
 
 /**
  * A singleton service responsible for all authentication-related operations
  * and for managing the current user's session state using signals.
  */
-@Injectable({ providedIn: 'root' })
+@Injectable({providedIn: 'root'})
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
@@ -122,6 +130,6 @@ export class AuthService {
    * @param path The endpoint path (e.g., '/users/me').
    */
   private buildUrl(path: string): string {
-    return `${environment.apiUrl}/api/v1${path}`;
+    return `${environment.authUrl}${path}`;
   }
 }
