@@ -56,28 +56,28 @@ docker compose build antares-auth
 
 ## How to Run
 
-### 1. Standalone (for API-only development)
+This service is designed to be run as part of the full StellarAtlas stack using Docker Compose. This
+ensures all dependencies (Database, Redis, Traefik) are correctly networked and configured.
 
-This is the recommended way to develop and debug the API locally.
-
-1. **Start Dependencies:** Start the required PostgreSQL and Redis containers using the main
-   `docker-compose.yml` at the project root.
-   ```bash
-   # From the project root
-   docker compose up -d castor-db pollux-cache
-   ```
-2. **Run the Application:** Run the `AntaresAuth` main class directly from your IDE.
-
-The API will be available at `http://localhost:8080` (main) and `http://localhost:9090` (actuator).
-
-### 2. Full Stack (via Root Docker Compose)
+### Run with Full Stack (via Root Docker Compose)
 
 To run the entire platform (Traefik, Frontend, API, Admin, DB, and Cache), use the
 `docker-compose.yml` in the project root.
 
-```bash
-# From the project root
-docker compose up --build -d
+1. **Build and start the services:**
+   ```bash
+   docker compose up --build -d
+   ```
+
+2. **Access the API:** The API will be available through the Traefik proxy at:
+
+- https://stellar.atlas/antares (Public API)
+- https://stellar.atlas/swagger-ui.html (Documentation - Requires Admin Access)
+
+3. **Logs:** To follow the logs for this specific service:
+
+```Bash
+docker compose logs -f antares-auth
 ```
 
 ## API Endpoints

@@ -13,15 +13,17 @@ Boot Admin to provide a centralized interface for managing registered microservi
 
 ## Security Configuration
 
-Vega uses a stateful, session-based security model secured by Spring Security.
+Vega is designed to run behind a secure reverse proxy and delegates authentication validation.
 
-- **Authentication**: In-Memory Authentication using credentials injected via environment variables.
-- **CSRF**: Enabled using`CookieCsrfTokenRepository`with`HttpOnly`set to false to allow client-side
-  interaction if necessary.
-- **Session Management**: Configured with a generated UUID key for Remember-Me tokens (valid for 2
-  weeks per session lifespan).
-- **Proxy Support**: Configured to trust`X-Forwarded-Proto`headers, allowing correct HTTPS
-  identification behind the Traefik proxy.
+- **Forward Authentication**: Security is handled by **Traefik** and the **Antares Auth API**.
+    - Requests reaching Vega must be pre-authenticated.
+    - The application trusts the infrastructure and is configured to `permitAll()` requests
+      internally, assuming the proxy has already enforced access control (User must be authenticated
+      and have `ROLE_ADMIN`).
+- **CSRF**: Enabled using `CookieCsrfTokenRepository` with `HttpOnly` set to false to allow
+  client-side interaction.
+- **Proxy Support**: Configured to trust `X-Forwarded-Proto` headers for correct HTTPS
+  identification.
 
 ## Prerequisites
 

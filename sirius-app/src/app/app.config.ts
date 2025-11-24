@@ -1,13 +1,12 @@
 import {ApplicationConfig} from '@angular/core';
 import {provideRouter, withComponentInputBinding, withViewTransitions} from '@angular/router';
-import {provideHttpClient, withInterceptors, withNoXsrfProtection} from '@angular/common/http';
+import {provideHttpClient, withInterceptors, withXsrfConfiguration} from '@angular/common/http';
 
 import {provideTranslateService} from '@ngx-translate/core';
 import {provideTranslateHttpLoader} from '@ngx-translate/http-loader';
 
 import {routes} from './app.routes';
 import {authInterceptor} from './core/interceptors/auth.interceptor';
-import {csrfInterceptor} from './core/interceptors/csrf.interceptor';
 import {loadingInterceptor} from './core/interceptors/loading.interceptor';
 
 /**
@@ -27,12 +26,16 @@ export const appConfig: ApplicationConfig = {
     // 2. HTTP CLIENT CONFIGURATION
     // Configures the HttpClient with a chain of functional interceptors. [cite: 1993]
     provideHttpClient(
+      // Activate XSRF protection
+      withXsrfConfiguration({
+        cookieName: 'XSRF-TOKEN',
+        headerName: 'X-XSRF-TOKEN',
+      }),
+      // Register functional interceptors
       withInterceptors([
-        csrfInterceptor,    // #1: Adds X-XSRF-TOKEN header to mutating requests.
-        authInterceptor,    // #2: Adds withCredentials and handles 401 session refresh.
-        loadingInterceptor, // #3: Manages global loading indicator during HTTP requests.
-      ]),
-      withNoXsrfProtection()
+        authInterceptor,    // #1: Adds withCredentials and handles 401 session refresh.
+        loadingInterceptor, // #2: Manages global loading indicator during HTTP requests.
+      ])
     ),
 
     // 3. INTERNATIONALIZATION (I18N) CONFIGURATION

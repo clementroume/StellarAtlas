@@ -1,7 +1,6 @@
 package atlas.stellar.antares.service;
 
 import atlas.stellar.antares.config.JwtProperties;
-import atlas.stellar.antares.exception.HashingException;
 import atlas.stellar.antares.model.User;
 import atlas.stellar.antares.repository.UserRepository;
 import java.nio.charset.StandardCharsets;
@@ -93,7 +92,7 @@ public class RefreshTokenService {
    *
    * @param value The string to hash.
    * @return The Base64 encoded SHA-256 hash.
-   * @throws HashingException if SHA-256 is not available.
+   * @throws IllegalStateException if SHA-256 is not available.
    */
   private String hashValue(String value) {
     try {
@@ -101,7 +100,7 @@ public class RefreshTokenService {
       byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));
       return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
     } catch (NoSuchAlgorithmException e) {
-      throw new HashingException("error.hashing.unavailable");
+      throw new IllegalStateException("SHA-256 algorithm not available", e);
     }
   }
 }

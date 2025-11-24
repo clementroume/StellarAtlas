@@ -163,26 +163,6 @@ public class GlobalExceptionHandler {
   }
 
   /**
-   * Handles {@link HashingException} specifically. Logs the full exception but returns a generic,
-   * translated 500 Internal Server Error.
-   *
-   * @param ex the exception thrown
-   * @param request the HTTP request
-   * @param locale the locale for message translation
-   * @return a standardized error response
-   */
-  @ExceptionHandler(HashingException.class)
-  public ResponseEntity<ErrorResponse> handleHashingException(
-      HashingException ex, HttpServletRequest request, Locale locale) {
-
-    log.error("Critical hashing failure", ex);
-    String message = messageSource.getMessage(ex.getMessageKey(), null, locale);
-
-    return buildErrorResponse(
-        HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error", message, request);
-  }
-
-  /**
    * A generic catch-all handler for any other unhandled {@link Exception}. Logs the full exception
    * but returns a generic, translated 500 Internal Server Error.
    *
