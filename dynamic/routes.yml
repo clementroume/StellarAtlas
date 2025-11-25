@@ -44,7 +44,7 @@ http:
   routers:
     # --- 1. Sirius-App Router ---
     sirius-app-router:
-      rule: "Host(`stellar.atlas`)"             # Match 'stellar.atlas'.
+      rule: "Host(`stellar.apex`)"             # Match 'stellar.apex'.
       entryPoints: [ "websecure" ]              # Use the 'websecure' (HTTPS) entrypoint.
       tls: true                                 # Enable TLS (HTTPS).
       priority: 5                               # Low priority to act as a catch-all for this domain.
@@ -53,7 +53,7 @@ http:
 
     # --- 2. Antares-Auth Sirius Router ---
     antares-auth-sirius-router:
-      rule: "Host(`stellar.atlas`) && PathPrefix(`/antares`)" # Match 'stellar.atlas/antares...'.
+      rule: "Host(`stellar.apex`) && PathPrefix(`/antares`)" # Match 'stellar.apex/antares...'.
       entryPoints: [ "websecure" ]              # Use the 'websecure' (HTTPS) entrypoint.
       tls: true                                 # Enable TLS (HTTPS).
       priority: 10                              # Higher priority to override the main app router.
@@ -64,7 +64,7 @@ http:
 
     # --- 3. Antares-Auth Swagger Router ---
     antares-auth-swagger-router:
-      rule: "Host(`stellar.atlas`) && (PathPrefix(`/swagger-ui`) || PathPrefix(`/v3/api-docs`))"
+      rule: "Host(`stellar.apex`) && (PathPrefix(`/swagger-ui`) || PathPrefix(`/v3/api-docs`))"
       entryPoints: [ "websecure" ]              # Use the 'websecure' (HTTPS) entrypoint.
       tls: true                                 # Enable TLS (HTTPS).
       priority: 10                              # Higher priority to override the main app router.
@@ -73,7 +73,7 @@ http:
 
     # --- 4. Vega-Admin Router ---
     vega-admin-router:
-      rule: "Host(`admin.stellar.atlas`)"       # Match 'admin.stellar.atlas'.
+      rule: "Host(`admin.stellar.apex`)"       # Match 'admin.stellar.apex'.
       entryPoints: [ "websecure" ]              # Use the 'websecure' (HTTPS) entrypoint.
       tls: true                                 # Enable TLS (HTTPS).
       service: "vega-admin-service"             # Route to the 'vega-admin' service
@@ -83,7 +83,7 @@ http:
 
     # --- 5. Altair-Proxy Router ---
     altair-proxy-router:
-      rule: "Host(`proxy.stellar.atlas`)"   # Match 'dashboard.stellar.atlas'.
+      rule: "Host(`proxy.stellar.apex`)"        # Match 'proxy.stellar.apex'.
       entryPoints: [ "websecure" ]              # Use the 'websecure' (HTTPS) entrypoint.
       tls: true                                 # Enable TLS (HTTPS).
       service: "api@internal"                   # Route to Traefik's internal API/dashboard service.

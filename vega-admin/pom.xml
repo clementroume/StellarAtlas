@@ -55,7 +55,7 @@
     </dependencies>
   </dependencyManagement>
   <description>Vega Admin Server (Monitoring)</description>
-  <groupId>atlas.stellar</groupId>
+  <groupId>apex.stellar</groupId>
   <modelVersion>4.0.0</modelVersion>
 
   <name>vega-admin</name>

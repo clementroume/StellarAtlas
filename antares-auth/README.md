@@ -1,8 +1,8 @@
 # Antares Auth API
 
-This is the core backend service for the Antares platform, responsible for user authentication,
-session management, and user profile operations. It is a secure, stateless Spring Boot application
-designed to run as a containerized microservice.
+This is the authentication backend service for the StellarApex platform, responsible for user
+authentication, session management, and user profile operations. It is a secure, stateless Spring
+Boot application designed to run as a containerized microservice.
 
 ## Tech Stack
 
@@ -71,8 +71,8 @@ To run the entire platform (Traefik, Frontend, API, Admin, DB, and Cache), use t
 
 2. **Access the API:** The API will be available through the Traefik proxy at:
 
-- https://stellar.atlas/antares (Public API)
-- https://stellar.atlas/swagger-ui.html (Documentation - Requires Admin Access)
+- https://stellar.apex/antares (Public API)
+- https://stellar.apex/swagger-ui.html (Documentation - Requires Admin Access)
 
 3. **Logs:** To follow the logs for this specific service:
 
@@ -82,14 +82,13 @@ docker compose logs -f antares-auth
 
 ## API Endpoints
 
-The API will be accessible via the Traefik proxy at `https://antares.local/antares`.
-
 ### Authentication (`/antares/auth`)
 
 * `POST /register`: Register a new user.
 * `POST /login`: Authenticate and receive HttpOnly session cookies.
 * `POST /logout`: Invalidate session and clear cookies.
 * `POST /refresh-token`: Use the refresh token (cookie) to get a new access token.
+* `GET /verify`: Forward Auth login for Vega and Altair.
 
 ### User (`/antares/users`)
 
@@ -97,14 +96,6 @@ The API will be accessible via the Traefik proxy at `https://antares.local/antar
 * `PUT /me/profile`: Update the user's first name, last name, or email.
 * `PATCH /me/preferences`: Update the user's locale (language) and theme.
 * `PUT /me/password`: Change the user's password.
-
-### API Documentation
-
-When the application is running (in any mode), the OpenAPI (Swagger) documentation is available at:
-**`https://stellar.atlas/swagger-ui.html`** (if using the full stack) or
-`http://localhost:8080/swagger-ui.html` (if running standalone).
-
-Access to the documentation is restricted to users with the `ROLE_ADMIN`.
 
 ## Database Migrations
 

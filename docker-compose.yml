@@ -1,4 +1,4 @@
-# Defines the infrastructure services for the Antares application stack.
+# Defines the infrastructure services for the StellarApex application stack.
 services:
   # --- 1. ALTAIR - THE TRAEFIK PROXY ---
   altair-proxy:

@@ -226,7 +226,7 @@
     </dependencies>
   </dependencyManagement>
   <description>Antares Auth Service (Identity/User Core)</description>
-  <groupId>atlas.stellar</groupId>
+  <groupId>apex.stellar</groupId>
   <modelVersion>4.0.0</modelVersion>
 
   <name>antares-auth</name>

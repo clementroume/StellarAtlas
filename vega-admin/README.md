@@ -1,6 +1,6 @@
 # Vega Admin Server
 
-Vega is the monitoring and administration server for the StellarAtlas platform. It utilizes Spring
+Vega is the monitoring and administration server for the StellarApex platform. It utilizes Spring
 Boot Admin to provide a centralized interface for managing registered microservices (such as
 `antares-auth`), viewing logs, tracking metrics, and monitoring health status.
 
@@ -30,15 +30,6 @@ Vega is designed to run behind a secure reverse proxy and delegates authenticati
 - Docker & Docker Compose
 - A configured`.env`file in the project root.
 
-## Environment Configuration
-
-The following variables must be defined in the root`.env`file for the application to start:
-
-| Variable         | Description                    |
-|------------------|--------------------------------|
-| `AMIN_USERNAME`  | Login username (email format). |
-| `ADMIN_PASSWORD` | Login password.                |
-
 ## How to Run
 
 This service is designed to be run as part of the full StellarAtlas stack via the root Docker
@@ -46,5 +37,5 @@ Compose.
 
 ## Accessing the Application
 
-- **URL (Traefik)**:`https://admin.stellar.atlas`
+- **URL (Traefik)**:`https://admin.stellar.apex`
 - **Local Port**:`9091`(Exposed internally within the Docker network)

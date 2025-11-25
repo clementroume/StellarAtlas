@@ -6,7 +6,7 @@
   },
   "DASHBOARD": {
     "TITLE": "Tableau de Bord",
-    "WELCOME": "Bienvenue sur Antares !"
+    "WELCOME": "Bienvenue sur Stellar Apex !"
   },
   "LOGIN": {
     "TITLE": "Bon retour !",
@@ -16,7 +16,7 @@
     "NO_ACCOUNT": "Pas encore de compte ? S'inscrire"
   },
   "REGISTER": {
-    "TITLE": "Rejoins Antares !",
+    "TITLE": "Rejoins Stellar Apex !",
     "SUBTITLE": "Crée ton compte pour commencer à enregistrer tes WODs.",
     "FIRST_NAME": "Prénom",
     "FIRST_NAME_PLACEHOLDER": "Ton prénom",

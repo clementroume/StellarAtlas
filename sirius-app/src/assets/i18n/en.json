@@ -6,7 +6,7 @@
   },
   "DASHBOARD": {
     "TITLE": "Dashboard",
-    "WELCOME": "Welcome to Antares!"
+    "WELCOME": "Welcome to Stellar Apex!"
   },
   "LOGIN": {
     "TITLE": "Welcome back!",
@@ -16,7 +16,7 @@
     "NO_ACCOUNT": "No account yet? Sign up"
   },
   "REGISTER": {
-    "TITLE": "Join Antares!",
+    "TITLE": "Join Stellar Apex!",
     "SUBTITLE": "Create your account to start logging your WODs.",
     "FIRST_NAME": "First Name",
     "FIRST_NAME_PLACEHOLDER": "Your first name",

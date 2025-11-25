@@ -1,6 +1,6 @@
-# StellarAtlas Project
+# StellarApex Project
 
-StellarAtlas is a modern, full-stack web application featuring a Spring Boot backend (
+StellarApex is a modern, full-stack web application featuring a Spring Boot backend (
 `antares-auth`), an Angular frontend (`sirius-app`), and a Spring Boot Admin server (`vega-admin`).
 The entire stack is containerized with Docker and served securely via a Traefik reverse proxy.
 
@@ -22,14 +22,14 @@ and routes requests to the appropriate service.
 ``` 
 (Your Machine)
         │
-        ├─ Public Access ([https://stellar.atlas](https://stellar.atlas))
+        ├─ Public Access ([https://stellar.apex](https://stellar.apex))
         │  │
         │  ├─ / (Routes Angular)      → [Traefik] → [sirius-app (Nginx)]
         │  └─ /antares/* (API)        → [Traefik] → [antares-auth (Spring)]
         │
         ├─ Admin Access
-        │  ├─ [https://admin.stellar.atlas](https://admin.stellar.atlas)     → [Traefik] → [vega-admin (Spring)]
-        │  └─ [https://proxy.stellar.atlas](https://proxy.stellar.atlas)     → [Traefik] (Internal Dashboard)
+        │  ├─ [https://admin.stellar.apex](https://admin.stellar.apex)     → [Traefik] → [vega-admin (Spring)]
+        │  └─ [https://proxy.stellar.apex](https://proxy.stellar.apex)     → [Traefik] (Internal Dashboard)
         │
         └─ Direct access (localhost only)
            ├─ localhost:5432  → [castor-db]
@@ -80,10 +80,10 @@ We need self-signed certificates for Traefik to serve HTTPS locally.
 # Create the certs directory
 mkdir -p certs
 
-# Generate the certificate for *.stellar.atlas
+# Generate the certificate for *.stellar.apex
 openssl req -x509 -nodes -days 365 -newkey rsa:2048
 -keyout certs/local.key -out certs/local.crt
--subj "/CN=*.stellar.atlas"
+-subj "/CN=*.stellar.apex"
 ```
 
 ### 3. Update Your Host File
@@ -96,8 +96,8 @@ Your computer needs to know that these domains point to your local machine.
 Add the following lines:
 
 ``` 
-127.0.0.1 stellar.atlas auth.stellar.atlas admin.stellar.atlas proxy.stellar.atlas 
-::1 stellar.atlas auth.stellar.atlas admin.stellar.atlas proxy.stellar.atlas 
+127.0.0.1 stellar.apex auth.stellar.apex admin.stellar.apex proxy.stellar.apex 
+::1 stellar.apex auth.stellar.apex admin.stellar.apex proxy.stellar.apex 
 ```
 
 ### 4. Build and Run Containers
@@ -113,12 +113,12 @@ docker compose up --build -d
 Your stack is now running. Your browser will show a security warning, which is normal (self-signed
 certificate). You can safely "proceed" or "accept the risk".
 
-- **Sirius - Angular frontend served by Nginx**:`https://stellar.atlas`
-- **Antares - Auth and Users SpringBoot Api**:`https://auth.stellar.atlas`
-    - **Antares (Sirius)**:`https://stellar.atlas/antares`
-    - **Antares (Swagger UI)**:`https://stellar.atlas/swagger-ui.html`
-- **Vega - Admin SpringBoot Server**:`https://admin.stellar.atlas`
-- **Altair - Traefik Dashboard**:`https://proxy.stellar.atlas`
+- **Sirius - Angular frontend served by Nginx**:`https://stellar.apex`
+- **Antares - Auth and Users SpringBoot Api**:`https://auth.stellar.apex`
+    - **Antares (Sirius)**:`https://stellar.apex/antares`
+    - **Antares (Swagger UI)**:`https://stellar.apex/swagger-ui.html`
+- **Vega - Admin SpringBoot Server**:`https://admin.stellar.apex`
+- **Altair - Traefik Dashboard**:`https://proxy.stellar.apex`
 
 **Database & Cache Access (Local Development)**
 
