@@ -1,120 +1,122 @@
 package apex.stellar.antares.service;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 import apex.stellar.antares.config.JwtProperties;
 import apex.stellar.antares.model.Role;
 import apex.stellar.antares.model.User;
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.crypto.MACSigner;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.Base64;
-import java.util.Date;
-import java.util.UUID;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 
 /**
- * Unit tests for {@link JwtService}. Verifies token generation, validation, and claim extraction.
+ * Unit tests for {@link JwtService}.
+ *
+ * <p>This test class verifies the token generation logic (delegation to {@link JwtEncoder}) and the
+ * cookie retrieval mechanism. Token validation logic is not tested here as it is now handled
+ * natively by the Spring Security OAuth2 Resource Server.
  */
+@ExtendWith(MockitoExtension.class)
 class JwtServiceTest {
-  private JwtService jwtService;
+
+  @Mock private JwtProperties jwtProperties;
+  @Mock private JwtEncoder jwtEncoder;
+  @Mock private HttpServletRequest request;
+
+  @InjectMocks private JwtService jwtService;
+
   private UserDetails userDetails;
-  private String secretKey;
 
+  /**
+   * Sets up the test environment.
+   *
+   * <p>Initializes a default {@link UserDetails} instance used across multiple tests. Note: {@code
+   * jwtProperties} are not mocked globally here to avoid {@code UnnecessaryStubbingException} in
+   * tests that do not utilize them (e.g., cookie retrieval).
+   */
   @BeforeEach
-  void setUp() throws JOSEException {
-    // Given
-    secretKey =
-        "YjQ1ZGRjYjU5YjYwNzZkMWY2MzE4YmFiY2Y4ZjgxMGE0YzY4ZmIwYmZkOTRkMjYxYmVjZGU1Y2Y3YWQyYjQzYw==";
-
-    JwtProperties jwtProperties =
-        new JwtProperties(
-            secretKey,
-            "test-issuer",
-            "test-audience",
-            new JwtProperties.AccessToken(900000L, "access_token"),
-            new JwtProperties.RefreshToken(604800000L, "refresh_token"),
-            new JwtProperties.CookieProperties(false, "stellar.apex"));
-
-    jwtService = new JwtService(jwtProperties);
-    jwtService.init(); // Initialise le signer/verifier Nimbus
-
+  void setUp() {
     userDetails =
         User.builder().email("test@example.com").password("password").role(Role.ROLE_USER).build();
   }
 
   @Test
-  @DisplayName("generateToken: should create a valid token with correct claims")
-  void testGenerateToken_shouldCreateValidToken() throws Exception {
+  @DisplayName("generateToken: should correctly delegate to JwtEncoder with expected claims")
+  void generateToken_shouldDelegateToJwtEncoder() {
+    // Given
+    // Mocking JWT properties specifically for this test case
+    JwtProperties.AccessToken accessTokenProps = mock(JwtProperties.AccessToken.class);
+    when(jwtProperties.accessToken()).thenReturn(accessTokenProps);
+    when(accessTokenProps.expiration()).thenReturn(60000L); // 1 minute expiration
+
+    // Important: The issuer must be a valid URL to satisfy Spring Security's strict validation
+    when(jwtProperties.issuer()).thenReturn("https://test-issuer.com");
+    when(jwtProperties.audience()).thenReturn("test-audience");
+
+    // Mocking the JwtEncoder behavior
+    Jwt jwtMock = mock(Jwt.class);
+    when(jwtMock.getTokenValue()).thenReturn("encoded-jwt-token-value");
+    when(jwtEncoder.encode(any(JwtEncoderParameters.class))).thenReturn(jwtMock);
+
     // When
-    String token = jwtService.generateToken(userDetails);
+    String tokenValue = jwtService.generateToken(userDetails);
 
     // Then
-    assertNotNull(token);
+    assertEquals("encoded-jwt-token-value", tokenValue);
 
-    SignedJWT signedJWT = SignedJWT.parse(token);
-    JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
+    // Capturing the parameters passed to the encoder to verify claims content
+    ArgumentCaptor<JwtEncoderParameters> captor =
+        ArgumentCaptor.forClass(JwtEncoderParameters.class);
+    verify(jwtEncoder).encode(captor.capture());
 
-    assertEquals("test@example.com", claims.getSubject());
-    assertEquals("test-issuer", claims.getIssuer());
-    assertTrue(claims.getAudience().contains("test-audience"));
-    assertNotNull(claims.getJWTID());
-    assertNotNull(claims.getIssueTime());
-    assertNotNull(claims.getExpirationTime());
+    JwtEncoderParameters params = captor.getValue();
+
+    // Assertions on standard claims
+    assertEquals("https://test-issuer.com", params.getClaims().getIssuer().toString());
+    assertTrue(params.getClaims().getAudience().contains("test-audience"));
+    assertEquals("test@example.com", params.getClaims().getSubject());
+
+    // Assertion on the custom "scope" claim (mapped from authorities)
+    assertEquals("ROLE_USER", params.getClaims().getClaim("scope"));
   }
 
   @Test
-  @DisplayName("isTokenValid: should return true for a valid token")
-  void testIsTokenValid_withValidToken_shouldReturnTrue() {
+  @DisplayName("getJwtFromCookies: should return the token value when the cookie exists")
+  void getJwtFromCookies_shouldReturnToken_whenCookieExists() {
     // Given
-    String token = jwtService.generateToken(userDetails);
+    Cookie cookie = new Cookie("stellar_access_token", "cookie-token-value");
+    when(request.getCookies()).thenReturn(new Cookie[] {cookie});
 
-    // When & Then
-    // This test primarily asserts that no exception is thrown
-    assertDoesNotThrow(() -> jwtService.isTokenValid(token, userDetails));
+    // When
+    String token = jwtService.getJwtFromCookies(request, "stellar_access_token");
+
+    // Then
+    assertEquals("cookie-token-value", token);
   }
 
   @Test
-  @DisplayName("isTokenValid: should return false (not throw) for an expired token")
-  void testIsTokenValid_withExpiredToken_shouldReturnFalse() throws Exception {
-    // Given: A token manually created with an expiration date in the past.
-    Date past = Date.from(Instant.now().minus(10, ChronoUnit.MINUTES));
-
-    JWTClaimsSet claims =
-        new JWTClaimsSet.Builder()
-            .subject(userDetails.getUsername())
-            .issuer("test-issuer")
-            .audience("test-audience")
-            .issueTime(past)
-            .expirationTime(past) // Expiration dans le passé
-            .jwtID(UUID.randomUUID().toString())
-            .build();
-
-    SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
-    signedJWT.sign(new MACSigner(Base64.getDecoder().decode(secretKey)));
-
-    String expiredToken = signedJWT.serialize();
-
-    // When & Then
-    assertFalse(jwtService.isTokenValid(expiredToken, userDetails));
-  }
-
-  @Test
-  @DisplayName("isTokenValid: should return false for a token belonging to a different user")
-  void testIsTokenValid_withDifferentUser_shouldReturnFalse() {
+  @DisplayName("getJwtFromCookies: should return null when the cookie is missing")
+  void getJwtFromCookies_shouldReturnNull_whenCookieMissing() {
     // Given
-    String token = jwtService.generateToken(userDetails);
-    UserDetails anotherUser = User.builder().email("another@example.com").build();
+    when(request.getCookies()).thenReturn(new Cookie[] {});
 
-    // When & Then
-    assertFalse(jwtService.isTokenValid(token, anotherUser));
+    // When
+    String token = jwtService.getJwtFromCookies(request, "stellar_access_token");
+
+    // Then
+    assertNull(token);
   }
 }
