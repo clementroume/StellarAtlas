@@ -163,7 +163,7 @@ class AuthenticationControllerIT extends BaseIntegrationTest {
   void testAccessProtectedResource_withoutCookie_shouldReturnForbidden() throws Exception {
     // Given (No cookie)
     // When/Then
-    mockMvc.perform(get("/antares/users/me").with(csrf())).andExpect(status().isForbidden());
+    mockMvc.perform(get("/antares/users/me").with(csrf())).andExpect(status().isUnauthorized());
   }
 
   @Test
