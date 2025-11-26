@@ -1,5 +1,6 @@
 package apex.stellar.antares.config;
 
+import apex.stellar.antares.exception.InvalidTokenException;
 import apex.stellar.antares.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -15,6 +16,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 
 /**
  * A custom Spring Security filter that intercepts all HTTP requests to authenticate users based on
@@ -26,6 +28,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
   private final JwtService jwtService;
   private final UserDetailsService userDetailsService;
+  private final HandlerExceptionResolver handlerExceptionResolver;
 
   /**
    * Reads the JWT access token from cookies, validates it, and sets the user authentication in the
@@ -52,16 +55,20 @@ public class JwtAuthFilter extends OncePerRequestFilter {
       return;
     }
 
-    final String userEmail = jwtService.extractUsername(accessToken);
-    if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-      UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
-      if (jwtService.isTokenValid(accessToken, userDetails)) {
-        UsernamePasswordAuthenticationToken authToken =
-            new UsernamePasswordAuthenticationToken(
-                userDetails, null, userDetails.getAuthorities());
-        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-        SecurityContextHolder.getContext().setAuthentication(authToken);
+    try {
+      final String userEmail = jwtService.extractUsername(accessToken);
+      if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
+        if (jwtService.isTokenValid(accessToken, userDetails)) {
+          UsernamePasswordAuthenticationToken authToken =
+              new UsernamePasswordAuthenticationToken(
+                  userDetails, null, userDetails.getAuthorities());
+          authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+          SecurityContextHolder.getContext().setAuthentication(authToken);
+        }
       }
+    } catch (InvalidTokenException | IllegalArgumentException e) {
+      handlerExceptionResolver.resolveException(request, response, null, e);
     }
 
     filterChain.doFilter(request, response);

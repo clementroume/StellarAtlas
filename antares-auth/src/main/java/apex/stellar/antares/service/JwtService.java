@@ -2,21 +2,28 @@ package apex.stellar.antares.service;
 
 import apex.stellar.antares.config.JwtProperties;
 import apex.stellar.antares.exception.InvalidTokenException;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.JWSSigner;
+import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jose.crypto.MACVerifier;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import java.text.ParseException;
+import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
-import javax.crypto.SecretKey;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.WebUtils;
@@ -24,32 +31,37 @@ import org.springframework.web.util.WebUtils;
 /** Service for handling JWT (JSON Web Token) creation, validation, and extraction logic. */
 @Service
 @Getter
+@Slf4j
+@RequiredArgsConstructor
 public class JwtService {
 
   private final JwtProperties jwtProperties;
-  private final String accessTokenCookieName;
-  private final String refreshTokenCookieName;
-  private final long accessTokenDurationMs;
-  private final long refreshTokenDurationMs;
-  private SecretKey signInKey; // The HMAC-SHA key used for signing tokens
+  private JWSSigner signer;
+  private JWSVerifier verifier;
 
-  /**
-   * Constructs a JwtService with the specified JwtProperties.
-   *
-   * @param jwtProperties The JWT configuration properties.
-   */
-  public JwtService(JwtProperties jwtProperties) {
-    this.jwtProperties = jwtProperties;
-    this.accessTokenCookieName = jwtProperties.accessToken().name();
-    this.refreshTokenCookieName = jwtProperties.refreshToken().name();
-    this.accessTokenDurationMs = jwtProperties.accessToken().expiration();
-    this.refreshTokenDurationMs = jwtProperties.refreshToken().expiration();
+  public String getAccessTokenCookieName() {
+    return jwtProperties.accessToken().name();
+  }
+
+  public String getRefreshTokenCookieName() {
+    return jwtProperties.refreshToken().name();
+  }
+
+  public long getAccessTokenDurationMs() {
+    return jwtProperties.accessToken().expiration();
+  }
+
+  public long getRefreshTokenDurationMs() {
+    return jwtProperties.refreshToken().expiration();
   }
 
   /** Initializes the service by decoding the Base64 secret key. */
   @PostConstruct
-  public void init() {
-    this.signInKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtProperties.secretKey()));
+  public void init() throws JOSEException {
+
+    byte[] keyBytes = Base64.getDecoder().decode(jwtProperties.secretKey());
+    this.signer = new MACSigner(keyBytes);
+    this.verifier = new MACVerifier(keyBytes);
   }
 
   /**
@@ -71,7 +83,7 @@ public class JwtService {
    * @return The username (email).
    */
   public String extractUsername(String token) {
-    return extractClaim(token, Claims::getSubject);
+    return extractClaim(token, JWTClaimsSet::getSubject);
   }
 
   /**
@@ -82,8 +94,9 @@ public class JwtService {
    * @param <T> The type of the claim.
    * @return The extracted claim.
    */
-  public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-    return claimsResolver.apply(extractAllClaims(token));
+  public <T> T extractClaim(String token, Function<JWTClaimsSet, T> claimsResolver) {
+    final JWTClaimsSet claims = extractAllClaims(token);
+    return claimsResolver.apply(claims);
   }
 
   /**
@@ -93,7 +106,7 @@ public class JwtService {
    * @return The generated JWT access token.
    */
   public String generateToken(UserDetails userDetails) {
-    return buildToken(new HashMap<>(), userDetails, accessTokenDurationMs);
+    return buildToken(new HashMap<>(), userDetails, getAccessTokenDurationMs());
   }
 
   /**
@@ -104,20 +117,30 @@ public class JwtService {
    * @param expiration The expiration time in milliseconds.
    * @return The compact, signed JWT string.
    */
+  @SuppressWarnings("checkstyle:CatchParameterName")
   public String buildToken(
       Map<String, Object> extraClaims, UserDetails userDetails, long expiration) {
-    return Jwts.builder()
-        .claims(extraClaims)
-        .subject(userDetails.getUsername())
-        .issuer(jwtProperties.issuer())
-        .audience()
-        .add(jwtProperties.audience())
-        .and()
-        .id(UUID.randomUUID().toString())
-        .issuedAt(new Date(System.currentTimeMillis()))
-        .expiration(new Date(System.currentTimeMillis() + expiration))
-        .signWith(signInKey)
-        .compact();
+    try {
+      long now = System.currentTimeMillis();
+
+      JWTClaimsSet.Builder claimsBuilder =
+          new JWTClaimsSet.Builder()
+              .subject(userDetails.getUsername())
+              .issuer(jwtProperties.issuer())
+              .audience(jwtProperties.audience())
+              .jwtID(UUID.randomUUID().toString())
+              .issueTime(new Date(now))
+              .expirationTime(new Date(now + expiration));
+
+      extraClaims.forEach(claimsBuilder::claim);
+
+      SignedJWT signedJwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claimsBuilder.build());
+      signedJwt.sign(signer);
+
+      return signedJwt.serialize();
+    } catch (JOSEException _) {
+      throw new InvalidTokenException("error.token.creation");
+    }
   }
 
   /**
@@ -128,7 +151,8 @@ public class JwtService {
    * @return true if the token is valid and belongs to the user.
    */
   public boolean isTokenValid(String token, UserDetails userDetails) {
-    return (extractUsername(token).equals(userDetails.getUsername())) && !isTokenExpired(token);
+    final String username = extractUsername(token);
+    return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
   }
 
   /**
@@ -139,11 +163,7 @@ public class JwtService {
    * @throws InvalidTokenException if the token is malformed or invalid.
    */
   private boolean isTokenExpired(String token) {
-    try {
-      return extractExpiration(token).before(new Date());
-    } catch (JwtException e) {
-      throw new InvalidTokenException("error.token.invalid");
-    }
+    return extractExpiration(token).before(new Date());
   }
 
   /**
@@ -153,7 +173,7 @@ public class JwtService {
    * @return The expiration date.
    */
   private Date extractExpiration(String token) {
-    return extractClaim(token, Claims::getExpiration);
+    return extractClaim(token, JWTClaimsSet::getExpirationTime);
   }
 
   /**
@@ -161,18 +181,30 @@ public class JwtService {
    *
    * @param token The JWT token.
    * @return The Claims object.
-   * @throws InvalidTokenException if the token fails validation.
+   * @throws InvalidTokenException if the token fails' validation.
    */
-  private Claims extractAllClaims(String token) {
+  @SuppressWarnings("checkstyle:CatchParameterName")
+  private JWTClaimsSet extractAllClaims(String token) {
     try {
-      return Jwts.parser()
-          .verifyWith(signInKey)
-          .requireIssuer(jwtProperties.issuer())
-          .requireAudience(jwtProperties.audience())
-          .build()
-          .parseSignedClaims(token)
-          .getPayload();
-    } catch (JwtException e) {
+      SignedJWT signedJwt = SignedJWT.parse(token);
+
+      if (!signedJwt.verify(verifier)) {
+        throw new InvalidTokenException("error.token.invalid.signature");
+      }
+
+      JWTClaimsSet claims = signedJwt.getJWTClaimsSet();
+
+      if (!jwtProperties.issuer().equals(claims.getIssuer())) {
+        throw new InvalidTokenException("error.token.invalid.issuer");
+      }
+      // Nimbus gère l'audience comme une liste
+      if (claims.getAudience() == null
+          || !claims.getAudience().contains(jwtProperties.audience())) {
+        throw new InvalidTokenException("error.token.invalid.audience");
+      }
+
+      return claims;
+    } catch (ParseException | JOSEException _) {
       throw new InvalidTokenException("error.token.invalid");
     }
   }

@@ -3,14 +3,19 @@ package apex.stellar.antares.service;
 import static org.junit.jupiter.api.Assertions.*;
 
 import apex.stellar.antares.config.JwtProperties;
-import apex.stellar.antares.exception.InvalidTokenException;
 import apex.stellar.antares.model.Role;
 import apex.stellar.antares.model.User;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
+import com.nimbusds.jose.JOSEException;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Base64;
 import java.util.Date;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,22 +27,25 @@ import org.springframework.security.core.userdetails.UserDetails;
 class JwtServiceTest {
   private JwtService jwtService;
   private UserDetails userDetails;
+  private String secretKey;
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws JOSEException {
     // Given
-    String testSecretKey =
+    secretKey =
         "YjQ1ZGRjYjU5YjYwNzZkMWY2MzE4YmFiY2Y4ZjgxMGE0YzY4ZmIwYmZkOTRkMjYxYmVjZGU1Y2Y3YWQyYjQzYw==";
+
     JwtProperties jwtProperties =
         new JwtProperties(
-            testSecretKey,
+            secretKey,
             "test-issuer",
             "test-audience",
             new JwtProperties.AccessToken(900000L, "access_token"),
             new JwtProperties.RefreshToken(604800000L, "refresh_token"),
-            new JwtProperties.CookieProperties(false, "stellar.atlas"));
+            new JwtProperties.CookieProperties(false, "stellar.apex"));
+
     jwtService = new JwtService(jwtProperties);
-    jwtService.init(); // Manually call @PostConstruct
+    jwtService.init(); // Initialise le signer/verifier Nimbus
 
     userDetails =
         User.builder().email("test@example.com").password("password").role(Role.ROLE_USER).build();
@@ -45,25 +53,22 @@ class JwtServiceTest {
 
   @Test
   @DisplayName("generateToken: should create a valid token with correct claims")
-  void testGenerateToken_shouldCreateValidToken() {
+  void testGenerateToken_shouldCreateValidToken() throws Exception {
     // When
     String token = jwtService.generateToken(userDetails);
 
     // Then
     assertNotNull(token);
-    Claims claims =
-        Jwts.parser()
-            .verifyWith(jwtService.getSignInKey())
-            .requireIssuer("test-issuer")
-            .requireAudience("test-audience")
-            .build()
-            .parseSignedClaims(token)
-            .getPayload();
+
+    SignedJWT signedJWT = SignedJWT.parse(token);
+    JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
 
     assertEquals("test@example.com", claims.getSubject());
-    assertNotNull(claims.getId());
-    assertNotNull(claims.getIssuedAt());
-    assertNotNull(claims.getExpiration());
+    assertEquals("test-issuer", claims.getIssuer());
+    assertTrue(claims.getAudience().contains("test-audience"));
+    assertNotNull(claims.getJWTID());
+    assertNotNull(claims.getIssueTime());
+    assertNotNull(claims.getExpirationTime());
   }
 
   @Test
@@ -78,24 +83,28 @@ class JwtServiceTest {
   }
 
   @Test
-  @DisplayName("isTokenValid: should throw InvalidTokenException for an expired token")
-  void testIsTokenValid_withExpiredToken_shouldThrowException() {
+  @DisplayName("isTokenValid: should return false (not throw) for an expired token")
+  void testIsTokenValid_withExpiredToken_shouldReturnFalse() throws Exception {
     // Given: A token manually created with an expiration date in the past.
-    String expiredToken =
-        Jwts.builder()
+    Date past = Date.from(Instant.now().minus(10, ChronoUnit.MINUTES));
+
+    JWTClaimsSet claims =
+        new JWTClaimsSet.Builder()
             .subject(userDetails.getUsername())
-            .issuer(jwtService.getJwtProperties().issuer())
-            .audience()
-            .add(jwtService.getJwtProperties().audience())
-            .and()
-            .issuedAt(Date.from(Instant.now().minus(10, ChronoUnit.MINUTES)))
-            .expiration(Date.from(Instant.now().minus(5, ChronoUnit.MINUTES)))
-            .signWith(jwtService.getSignInKey())
-            .compact();
+            .issuer("test-issuer")
+            .audience("test-audience")
+            .issueTime(past)
+            .expirationTime(past) // Expiration dans le passé
+            .jwtID(UUID.randomUUID().toString())
+            .build();
+
+    SignedJWT signedJWT = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
+    signedJWT.sign(new MACSigner(Base64.getDecoder().decode(secretKey)));
+
+    String expiredToken = signedJWT.serialize();
 
     // When & Then
-    assertThrows(
-        InvalidTokenException.class, () -> jwtService.isTokenValid(expiredToken, userDetails));
+    assertFalse(jwtService.isTokenValid(expiredToken, userDetails));
   }
 
   @Test
