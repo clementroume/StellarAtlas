@@ -7,25 +7,24 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Testcontainers // <--- Active l'extension JUnit 5
 public abstract class BaseIntegrationTest {
 
-  // Le mot-clé 'static' assure que le conteneur est partagé entre toutes les classes de test
-  // (Singleton)
-  @Container @ServiceConnection // <--- Configure auto magiquement spring.datasource.*
-  static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16-alpine");
+  @ServiceConnection
+  static final PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16-alpine");
 
-  @Container
-  @ServiceConnection(name = "redis") // <--- Configure auto magiquement spring.data.redis.*
-  static GenericContainer<?> redis =
+  @ServiceConnection(name = "redis")
+  static final GenericContainer<?> redis =
       new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
+
+  static {
+    postgres.start();
+    redis.start();
+  }
 
   @DynamicPropertySource
   static void registerCustomProperties(DynamicPropertyRegistry registry) {
