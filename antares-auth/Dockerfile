@@ -39,7 +39,7 @@ FROM eclipse-temurin:25-jdk-alpine AS jlinker
 # Build a custom JRE containing only the modules required by Spring Boot/JPA/Web.
 # This significantly reduces the runtime footprint compared to a full JRE.
 RUN "$JAVA_HOME/bin/jlink" \
-    --add-modules java.base,java.logging,java.naming,java.desktop,java.management,java.security.jgss,java.instrument,java.sql,java.net.http,jdk.unsupported,jdk.crypto.ec,java.rmi,java.xml \
+    --add-modules java.base,java.logging,java.naming,java.desktop,java.management,java.security.jgss,java.instrument,java.sql,java.net.http,jdk.unsupported,jdk.crypto.ec,java.rmi,java.xml,java.compiler \
     --strip-debug \
     --no-man-pages \
     --no-header-files \

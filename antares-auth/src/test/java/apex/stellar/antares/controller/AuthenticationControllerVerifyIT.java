@@ -11,7 +11,6 @@ import apex.stellar.antares.dto.RegisterRequest;
 import apex.stellar.antares.model.Role;
 import apex.stellar.antares.model.User;
 import apex.stellar.antares.repository.UserRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,12 +23,13 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import tools.jackson.databind.json.JsonMapper;
 
 /** Integration tests specifically for the Forward Auth endpoint (/verify). */
 class AuthenticationControllerVerifyIT extends BaseIntegrationTest {
 
   @Autowired private MockMvc mockMvc;
-  @Autowired private ObjectMapper objectMapper;
+  @Autowired private JsonMapper objectMapper;
   @Autowired private UserRepository userRepository;
   @Autowired private PasswordEncoder passwordEncoder;
 

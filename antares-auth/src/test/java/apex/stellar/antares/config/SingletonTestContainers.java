@@ -2,8 +2,8 @@ package apex.stellar.antares.config;
 
 import java.time.Duration;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /**
  * Manages Testcontainers for PostgreSQL and Redis as singletons.
@@ -15,14 +15,14 @@ import org.testcontainers.containers.wait.strategy.Wait;
 public abstract class SingletonTestContainers {
 
   // PostgreSQL container instance
-  public static final PostgreSQLContainer<?> postgres;
+  public static final PostgreSQLContainer postgres;
   // Redis container instance
   public static final GenericContainer<?> redis;
 
   static {
     // Initialize PostgreSQL container
     postgres =
-        new PostgreSQLContainer<>("postgres:16-alpine")
+        new PostgreSQLContainer("postgres:16-alpine")
             .withDatabaseName("testdb")
             .withUsername("test")
             .withPassword("test");

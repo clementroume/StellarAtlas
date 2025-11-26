@@ -12,34 +12,32 @@ import apex.stellar.antares.dto.PreferencesUpdateRequest;
 import apex.stellar.antares.dto.ProfileUpdateRequest;
 import apex.stellar.antares.dto.RegisterRequest;
 import apex.stellar.antares.repository.UserRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Integration tests for user profile and settings management endpoints in {@link UserController}.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
-@Testcontainers // Indicates that this test class uses Testcontainers
 class UserControllerIT extends BaseIntegrationTest {
 
   private final String initialEmail = "profile.user@example.com";
   private final String initialPassword = "password123";
   @Autowired private MockMvc mockMvc;
-  @Autowired private ObjectMapper objectMapper;
+  @Autowired private JsonMapper objectMapper;
   @Autowired private UserRepository userRepository;
   private Cookie[] authCookies; // Stores auth cookies for test requests
 

@@ -11,7 +11,6 @@ import apex.stellar.antares.config.BaseIntegrationTest;
 import apex.stellar.antares.dto.AuthenticationRequest;
 import apex.stellar.antares.dto.RegisterRequest;
 import apex.stellar.antares.repository.UserRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +19,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Integration tests for the {@link AuthenticationController}.
@@ -30,7 +30,7 @@ import org.springframework.test.web.servlet.MvcResult;
 class AuthenticationControllerIT extends BaseIntegrationTest {
 
   @Autowired private MockMvc mockMvc;
-  @Autowired private ObjectMapper objectMapper;
+  @Autowired private JsonMapper objectMapper;
   @Autowired private UserRepository userRepository;
 
   /** Cleans the database before each test (except for admin users). */
