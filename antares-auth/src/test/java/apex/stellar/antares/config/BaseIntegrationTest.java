@@ -1,41 +1,36 @@
 package apex.stellar.antares.config;
 
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
-/**
- * Base abstract class for all integration tests.
- *
- * <p>This class sets up the Spring Boot test environment, activates the "test" profile, and
- * inherits the singleton Testcontainers. It uses {@link DynamicPropertySource} to override
- * application properties at runtime with the dynamic ports and credentials from the containers.
- */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureMockMvc // Configures MockMvc for testing web controllers
-@ActiveProfiles("test") // Activates the 'application-test.properties'
-public abstract class BaseIntegrationTest extends SingletonTestContainers {
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+@Testcontainers // <--- Active l'extension JUnit 5
+public abstract class BaseIntegrationTest {
 
-  /**
-   * Dynamically registers properties from the Testcontainers into the Spring ApplicationContext
-   * before it starts.
-   *
-   * @param registry The property registry to add properties to.
-   */
+  // Le mot-clé 'static' assure que le conteneur est partagé entre toutes les classes de test
+  // (Singleton)
+  @Container @ServiceConnection // <--- Configure auto magiquement spring.datasource.*
+  static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16-alpine");
+
+  @Container
+  @ServiceConnection(name = "redis") // <--- Configure auto magiquement spring.data.redis.*
+  static GenericContainer<?> redis =
+      new GenericContainer<>("redis:7-alpine").withExposedPorts(6379);
+
   @DynamicPropertySource
-  static void registerDynamicProperties(DynamicPropertyRegistry registry) {
-    // Inject PostgreSQL properties
-    registry.add("spring.datasource.url", postgres::getJdbcUrl);
-    registry.add("spring.datasource.username", postgres::getUsername);
-    registry.add("spring.datasource.password", postgres::getPassword);
-
-    // Inject Redis properties
-    registry.add("spring.data.redis.host", redis::getHost);
-    registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
-
-    // Inject dummy security and admin properties for the test environment
+  static void registerCustomProperties(DynamicPropertyRegistry registry) {
+    // On garde ici uniquement les propriétés métier spécifiques (JWT, Admin)
+    // Les propriétés d'infra (DB, Redis) sont gérées par @ServiceConnection
     registry.add(
         "ANTARES_JWT_SECRET",
         () ->
