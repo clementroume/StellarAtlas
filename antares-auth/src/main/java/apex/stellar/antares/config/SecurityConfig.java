@@ -22,10 +22,15 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
@@ -148,8 +153,8 @@ public class SecurityConfig {
   /**
    * Configures a converter to transform a raw JWT into an authenticated Principal.
    *
-   * <p>This implementation extracts the subject (email) from the JWT and retrieves the full {@link
-   * User} entity via {@link UserDetailsService}.
+   * <p>This implementation extracts the subject (email) from the JWT and retrieves {@link User}
+   * entity via {@link UserDetailsService}.
    *
    * <p><b>Performance Note:</b> The user details lookup is cached (e.g., in Redis) as configured in
    * {@link ApplicationConfig}. This architecture avoids a database round-trip for every request
@@ -170,7 +175,16 @@ public class SecurityConfig {
   /**
    * Configures the {@link JwtDecoder} for verifying incoming tokens.
    *
-   * @return The configured JWT decoder using HMAC SHA-256.
+   * <p><b>Security Features:</b>
+   *
+   * <ul>
+   *   <li>Signature verification (HMAC-SHA256).
+   *   <li>Expiration check (exp, nbf).
+   *   <li>Issuer validation (must match 'antares-auth').
+   *   <li>Audience validation (must contain 'sirius-app').
+   * </ul>
+   *
+   * @return The configured JWT decoder.
    */
   @Bean
   public JwtDecoder jwtDecoder() {
@@ -178,7 +192,23 @@ public class SecurityConfig {
     SecretKeySpec secretKey =
         new SecretKeySpec(jwtProperties.secretKey().getBytes(StandardCharsets.UTF_8), "HmacSHA256");
 
-    return NimbusJwtDecoder.withSecretKey(secretKey).macAlgorithm(MacAlgorithm.HS256).build();
+    NimbusJwtDecoder decoder =
+        NimbusJwtDecoder.withSecretKey(secretKey).macAlgorithm(MacAlgorithm.HS256).build();
+
+    // 1. Standard Validator (checks 'exp', 'nbf', and 'iss')
+    OAuth2TokenValidator<Jwt> withIssuer =
+        JwtValidators.createDefaultWithIssuer(jwtProperties.issuer());
+
+    // 2. Custom Audience Validator (checks 'aud')
+    OAuth2TokenValidator<Jwt> withAudience = new AudienceValidator(jwtProperties.audience());
+
+    // 3. Combine Validators
+    OAuth2TokenValidator<Jwt> combinedValidator =
+        new DelegatingOAuth2TokenValidator<>(withIssuer, withAudience);
+
+    decoder.setJwtValidator(combinedValidator);
+
+    return decoder;
   }
 
   /**
@@ -212,5 +242,21 @@ public class SecurityConfig {
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", configuration);
     return source;
+  }
+
+  /**
+   * Custom Validator to verify the 'aud' (Audience) claim. Ensures the token is intended for this
+   * application.
+   */
+  private record AudienceValidator(String audience) implements OAuth2TokenValidator<Jwt> {
+
+    @Override
+    public OAuth2TokenValidatorResult validate(Jwt jwt) {
+      if (jwt.getAudience().contains(audience)) {
+        return OAuth2TokenValidatorResult.success();
+      }
+      return OAuth2TokenValidatorResult.failure(
+          new OAuth2Error("invalid_token", "The required audience is missing", null));
+    }
   }
 }
