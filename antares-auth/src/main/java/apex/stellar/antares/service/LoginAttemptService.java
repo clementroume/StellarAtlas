@@ -22,7 +22,7 @@ public class LoginAttemptService {
 
   private final StringRedisTemplate redisTemplate;
 
-  // Injectable configuration with safe defaults (5 attempts, 15 minutes lock)
+  // Injectable configuration with safe defaults (5 attempts, 15-minute lock)
   @Value("${application.security.login.max-attempts:5}")
   private int maxAttempts;
 

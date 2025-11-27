@@ -1,8 +1,11 @@
 package apex.stellar.antares.config;
 
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import java.time.Duration;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,45 +13,38 @@ import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
+import org.springframework.validation.annotation.Validated;
 
 /** Configuration class for Redis Caching and Repositories. */
 @Configuration
 @EnableCaching
 @EnableRedisRepositories(basePackages = "apex.stellar.antares.repository")
+@EnableConfigurationProperties(RedisCacheConfig.CacheProperties.class)
 public class RedisCacheConfig {
 
-  @Value("${application.cache.default.ttl}")
-  private Long defaultTtl;
-
-  @Value("${application.cache.users.ttl}")
-  private Long usersTtl;
-
   /**
-   * Creates and configures a {@link RedisCacheManager} bean for managing cache operations.
+   * Configures the Spring-native CacheManager using the inner configuration properties.
    *
-   * <p>The default cache configuration includes: - Default entry time-to-live (TTL) of 10 minutes.
-   * - Caching of null values is disabled.
-   *
-   * <p>Additionally, specific cache configurations can be defined, e.g., a custom TTL of 5 minutes
-   * for the "users" cache.
-   *
-   * @param redisConnectionFactory The {@link RedisConnectionFactory} used to connect to the Redis
-   *     instance.
-   * @return A fully configured {@link RedisCacheManager} instance.
+   * @param redisConnectionFactory The Redis connection factory.
+   * @param properties The injected inner configuration properties.
    */
   @Bean
-  public RedisCacheManager cacheManager(RedisConnectionFactory redisConnectionFactory) {
+  public RedisCacheManager cacheManager(
+      RedisConnectionFactory redisConnectionFactory, CacheProperties properties) {
 
+    // 1. Default Configuration
     RedisCacheConfiguration defaultConfig =
         RedisCacheConfiguration.defaultCacheConfig()
-            .entryTtl(Duration.ofMillis(defaultTtl))
+            .entryTtl(Duration.ofMillis(properties.defaultTtl()))
             .disableCachingNullValues();
 
+    // 2. Specific Configuration for 'users'
     RedisCacheConfiguration usersConfig =
         RedisCacheConfiguration.defaultCacheConfig()
-            .entryTtl(Duration.ofMillis(usersTtl))
+            .entryTtl(Duration.ofMillis(properties.usersTtl()))
             .disableCachingNullValues();
 
+    // 3. Map configurations
     Map<String, RedisCacheConfiguration> cacheConfigurations = Map.of("users", usersConfig);
 
     return RedisCacheManager.builder(redisConnectionFactory)
@@ -56,4 +52,13 @@ public class RedisCacheConfig {
         .withInitialCacheConfigurations(cacheConfigurations)
         .build();
   }
+
+  /**
+   * Inner configuration record for Cache properties. Maps properties starting with
+   * 'application.cache'.
+   */
+  @ConfigurationProperties(prefix = "application.cache")
+  @Validated
+  public record CacheProperties(
+      @NotNull @Positive Long defaultTtl, @NotNull @Positive Long usersTtl) {}
 }
