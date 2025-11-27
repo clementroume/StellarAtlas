@@ -6,6 +6,7 @@ import {AuthService} from '../../../core/services/auth.service';
 import {TranslateModule} from '@ngx-translate/core';
 import {NotificationService} from '../../../core/services/notification.service';
 import {HttpErrorResponse} from '@angular/common/http';
+import {ProblemDetail} from '../../../core/models/problem-detail.model';
 
 /**
  * Handles the user login page.
@@ -67,9 +68,9 @@ export class LoginComponent implements OnInit {
         }
       },
       error: (err: HttpErrorResponse) => {
-        if (err.error?.message) {
-          this.notificationService.showError(err.error.message);
-        }
+        const problem: ProblemDetail = err.error;
+        const message = problem?.detail || problem?.title || 'Une erreur est survenue';
+        this.notificationService.showError(message);
       }
     });
   }

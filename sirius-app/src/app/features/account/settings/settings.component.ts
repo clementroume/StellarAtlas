@@ -1,12 +1,21 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
-import { AuthService } from '../../../core/services/auth.service';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { NotificationService } from '../../../core/services/notification.service';
-import { HttpErrorResponse } from '@angular/common/http';
-import { ThemeService } from '../../../core/services/theme.service';
-import { PreferencesUpdateRequest } from '../../../core/models/user.model';
+import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {
+  AbstractControl,
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators
+} from '@angular/forms';
+import {AuthService} from '../../../core/services/auth.service';
+import {TranslateModule, TranslateService} from '@ngx-translate/core';
+import {NotificationService} from '../../../core/services/notification.service';
+import {HttpErrorResponse} from '@angular/common/http';
+import {ThemeService} from '../../../core/services/theme.service';
+import {PreferencesUpdateRequest} from '../../../core/models/user.model';
+import {ProblemDetail} from '../../../core/models/problem-detail.model';
 
 /**
  * Custom validator to check if the new password and confirmation password fields match.
@@ -14,7 +23,7 @@ import { PreferencesUpdateRequest } from '../../../core/models/user.model';
 export const passwordMatchValidator: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
   const newPassword = control.get('newPassword');
   const confirmationPassword = control.get('confirmationPassword');
-  return newPassword && confirmationPassword && newPassword.value !== confirmationPassword.value ? { passwordsMismatch: true } : null;
+  return newPassword && confirmationPassword && newPassword.value !== confirmationPassword.value ? {passwordsMismatch: true} : null;
 };
 
 /**
@@ -29,19 +38,18 @@ export const passwordMatchValidator: ValidatorFn = (control: AbstractControl): V
 })
 export class SettingsComponent {
   public readonly passwordForm: FormGroup;
-
+  public readonly translate = inject(TranslateService);
   private readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
   private readonly notificationService = inject(NotificationService);
   private readonly themeService = inject(ThemeService);
-  public readonly translate = inject(TranslateService);
 
   constructor() {
     this.passwordForm = this.fb.group({
       currentPassword: ['', [Validators.required]],
       newPassword: ['', [Validators.required, Validators.minLength(8)]],
       confirmationPassword: ['', [Validators.required]]
-    }, { validators: passwordMatchValidator });
+    }, {validators: passwordMatchValidator});
   }
 
   /**
@@ -60,9 +68,9 @@ export class SettingsComponent {
         this.passwordForm.reset();
       },
       error: (err: HttpErrorResponse) => {
-        if (err.error?.message) {
-          this.notificationService.showError(err.error.message);
-        }
+        const problem: ProblemDetail = err.error;
+        const message = problem?.detail || problem?.title || 'Une erreur est survenue';
+        this.notificationService.showError(message);
       }
     });
   }

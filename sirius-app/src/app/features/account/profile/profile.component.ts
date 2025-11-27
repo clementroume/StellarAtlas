@@ -1,10 +1,12 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { AuthService } from '../../../core/services/auth.service';
-import { TranslateModule, TranslateService  } from '@ngx-translate/core';
-import { NotificationService } from '../../../core/services/notification.service';
-import { HttpErrorResponse } from '@angular/common/http';
+import {ChangeDetectionStrategy, Component, inject, OnInit} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {FormBuilder, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
+import {AuthService} from '../../../core/services/auth.service';
+import {TranslateModule, TranslateService} from '@ngx-translate/core';
+import {NotificationService} from '../../../core/services/notification.service';
+import {HttpErrorResponse} from '@angular/common/http';
+import {ProblemDetail} from '../../../core/models/problem-detail.model';
+
 /**
  * Component for displaying and editing the user's profile information.
  * It uses a reactive form to manage user data and editing state.
@@ -77,9 +79,9 @@ export class ProfileComponent implements OnInit {
         this.isEditing = false;
       },
       error: (err: HttpErrorResponse) => {
-        if (err.error?.message) {
-          this.notificationService.showError(err.error.message);
-        }
+        const problem: ProblemDetail = err.error;
+        const message = problem?.detail || problem?.title || 'Une erreur est survenue';
+        this.notificationService.showError(message);
       }
     });
   }
