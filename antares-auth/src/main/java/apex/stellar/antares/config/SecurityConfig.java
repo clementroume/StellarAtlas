@@ -5,14 +5,17 @@ import static org.springframework.security.config.Customizer.withDefaults;
 import apex.stellar.antares.model.User;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import javax.crypto.spec.SecretKeySpec;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -20,6 +23,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
@@ -34,14 +38,16 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
- * Main web security configuration for the application.
+ * Main security configuration for the Antares API.
  *
- * <p>This setup is designed for a stateless API using HttpOnly JWT cookies and "Double Submit
- * Cookie" CSRF protection.
+ * <p>This configuration establishes a stateless security architecture using JWTs (JSON Web Tokens)
+ * stored in HttpOnly cookies, reinforced by Double-Submit Cookie CSRF protection. It integrates
+ * with Spring Security's OAuth2 Resource Server to handle token validation and principal
+ * extraction.
  */
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // Enables method-level security (e.g., @PreAuthorize)
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -52,121 +58,127 @@ public class SecurityConfig {
   private String allowedOrigins;
 
   /**
-   * Configures the primary security filter chain that applies to all HTTP requests.
+   * Configures the primary security filter chain for the application.
    *
-   * @param http The HttpSecurity object to configure.
-   * @return The configured SecurityFilterChain.
+   * @param http The {@link HttpSecurity} builder.
+   * @return The configured {@link SecurityFilterChain}.
    */
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) {
 
+    // CSRF Configuration:
+    // We use a cookie-based repository. Crucially, 'withHttpOnlyFalse' is used, so the Angular
+    // frontend can read the CSRF token from the cookie and include it in the 'X-XSRF-TOKEN' header.
     CookieCsrfTokenRepository csrfRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
     csrfRepository.setCookieCustomizer(builder -> builder.secure(true).sameSite("Strict"));
 
-    // Handler to ensure CSRF token is accessible by JavaScript (for the header)
-    // but not sent as a request attribute.
+    // The RequestAttributeHandler makes the CSRF token available as a request attribute,
+    // which is required for the XorCsrfTokenRequestAttributeHandler default in Spring Security 6.
     CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
-    requestHandler.setCsrfRequestAttributeName(null);
 
-    http.cors(withDefaults()) // Enable CORS using the corsConfigurationSource bean
+    http.cors(withDefaults()) // Delegate to the corsConfigurationSource bean
         .csrf(
             csrf ->
-                csrf
-                    // Use CookieCsrfTokenRepository, setting HttpOnly=false so Angular can read it.
-                    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                csrf.csrfTokenRepository(csrfRepository)
                     .csrfTokenRequestHandler(requestHandler)
-                    // Disable CSRF protection for public auth endpoints and actuators
+                    // Exclude public authentication endpoints and actuators from CSRF checks
                     .ignoringRequestMatchers("/antares/auth/**", "/actuator/**"))
         .authorizeHttpRequests(
             auth ->
                 auth
-                    // Secure Swagger/OpenAPI endpoints (admin only)
+                    // Secure Documentation and Admin endpoints (ADMIN only)
                     .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**")
                     .hasRole("ADMIN")
-                    // Public endpoints
+                    // Allow public access to Authentication & Health endpoints
                     .requestMatchers("/antares/auth/**", "/actuator/**")
                     .permitAll()
-                    // All other endpoints require authentication
+                    // Require authentication for all other endpoints
                     .anyRequest()
                     .authenticated())
         .sessionManagement(
             session ->
-                // Configure the application to be stateless (no HttpSession)
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        // Add the custom JWT filter before the standard username/password filter
+                session
+                    // Enforce statelessness; no HttpSession will be created or used
+                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .oauth2ResourceServer(
             oauth2 ->
                 oauth2
-                    // 1. Utilisation du resolver de cookie
                     .bearerTokenResolver(bearerTokenResolver())
-                    // 2. Conversion du JWT en User entity
                     .jwt(
                         jwt ->
                             jwt.decoder(jwtDecoder())
-                                .jwtAuthenticationConverter(
-                                    token -> {
-                                      // On charge l'utilisateur depuis la DB via le 'sub' (email)
-                                      // du token
-                                      String email = token.getSubject();
-                                      User user =
-                                          (User) userDetailsService.loadUserByUsername(email);
-                                      // On retourne un token standard Spring Security contenant
-                                      // notre User
-                                      return new UsernamePasswordAuthenticationToken(
-                                          user, token, user.getAuthorities());
-                                    })));
+                                .jwtAuthenticationConverter(jwtAuthenticationConverter())));
 
     return http.build();
   }
 
   /**
-   * Custom Token Resolver qui cherche d'abord dans le cookie, puis dans le header (fallback
-   * standard).
+   * Configures a custom {@link BearerTokenResolver} to extract the access token.
+   *
+   * <p>Strategy:
+   *
+   * <ol>
+   *   <li>Attempt to find the token in the configured access token Cookie.
+   *   <li>Fallback to the standard Authorization header (Bearer schema) for API clients.
+   * </ol>
+   *
+   * @return The token resolver instance.
    */
   @Bean
   public BearerTokenResolver bearerTokenResolver() {
-    return new BearerTokenResolver() {
-      private final BearerTokenResolver defaultResolver = new DefaultBearerTokenResolver();
-
-      @Override
-      public String resolve(HttpServletRequest request) {
-        // Stratégie 1 : Chercher dans les cookies
-        if (request.getCookies() != null) {
-          for (Cookie cookie : request.getCookies()) {
-            if (jwtProperties.accessToken().name().equals(cookie.getName())) {
-              return cookie.getValue();
-            }
-          }
-        }
-        // Stratégie 2 : Fallback sur le header Authorization (utile pour Swagger/Postman)
-        return defaultResolver.resolve(request);
+    DefaultBearerTokenResolver headerResolver = new DefaultBearerTokenResolver();
+    return request -> {
+      // 1. Check Cookies
+      if (request.getCookies() != null) {
+        return Arrays.stream(request.getCookies())
+            .filter(c -> jwtProperties.accessToken().name().equals(c.getName()))
+            .map(Cookie::getValue)
+            .findFirst()
+            .orElseGet(() -> headerResolver.resolve(request));
       }
+      // 2. Fallback to Header
+      return headerResolver.resolve(request);
     };
   }
 
   /**
-   * Creates and configures a {@link JwtDecoder} bean for decoding JWT tokens.
+   * Configures a converter to transform a raw JWT into an authenticated Principal.
    *
-   * <p>This method reads the secret key from {@link JwtProperties}, decodes it, and configures a
-   * {@link NimbusJwtDecoder} with the specified secret key and HMAC SHA-256 algorithm.
+   * <p>This implementation extracts the subject (email) from the JWT and retrieves the full {@link
+   * User} entity via {@link UserDetailsService}.
    *
-   * @return A {@link JwtDecoder} instance configured for processing JWT tokens.
+   * <p><b>Performance Note:</b> The user details lookup is cached (e.g., in Redis) as configured in
+   * {@link ApplicationConfig}. This architecture avoids a database round-trip for every request
+   * while ensuring the Principal reflects the user's up-to-date state (thanks to cache eviction on
+   * updates).
+   *
+   * @return A converter from {@link Jwt} to {@link AbstractAuthenticationToken}.
+   */
+  private Converter<@NonNull Jwt, @NonNull AbstractAuthenticationToken>
+      jwtAuthenticationConverter() {
+    return jwt -> {
+      String email = jwt.getSubject();
+      User user = (User) userDetailsService.loadUserByUsername(email);
+      return new UsernamePasswordAuthenticationToken(user, jwt, user.getAuthorities());
+    };
+  }
+
+  /**
+   * Configures the {@link JwtDecoder} for verifying incoming tokens.
+   *
+   * @return The configured JWT decoder using HMAC SHA-256.
    */
   @Bean
   public JwtDecoder jwtDecoder() {
     byte[] keyBytes = Base64.getDecoder().decode(jwtProperties.secretKey());
     SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "HmacSHA256");
-
     return NimbusJwtDecoder.withSecretKey(secretKey).macAlgorithm(MacAlgorithm.HS256).build();
   }
 
   /**
-   * Creates and configures a {@link JwtEncoder} bean for encoding JWT tokens.
+   * Configures the {@link JwtEncoder} for signing outgoing tokens.
    *
-   * <p>This method uses the secret key stored in {@link JwtProperties} to initialize a {@link
-   * NimbusJwtEncoder} with an {@link ImmutableSecret} key implementation.
-   *
-   * @return A {@link JwtEncoder} instance configured for encoding JWT tokens.
+   * @return The configured JWT encoder.
    */
   @Bean
   public JwtEncoder jwtEncoder() {
@@ -177,23 +189,21 @@ public class SecurityConfig {
   /**
    * Defines the Cross-Origin Resource Sharing (CORS) configuration.
    *
-   * <p>This bean allows the Angular frontend (running on '<a
-   * href="https://antares.local">https://antares.local</a>') to make requests to this API.
+   * <p>Allows the Angular frontend to communicate with this API, exposing the necessary headers and
+   * allowing credentials (cookies).
    *
-   * @return The CorsConfigurationSource.
+   * @return The CORS configuration source.
    */
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
-
     CorsConfiguration configuration = new CorsConfiguration();
-    configuration.setAllowedOriginPatterns(List.of(this.allowedOrigins, "https://*.stellar.apex"));
+    configuration.setAllowedOriginPatterns(List.of(allowedOrigins, "https://*.stellar.apex"));
     configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-XSRF-TOKEN"));
-    configuration.setAllowCredentials(Boolean.TRUE); // Crucial for sending/receiving cookies
+    configuration.setAllowCredentials(true); // Essential for Cookie-based auth
 
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/**", configuration);
-
     return source;
   }
 }

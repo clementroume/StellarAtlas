@@ -6,10 +6,12 @@ import apex.stellar.antares.repository.UserRepository;
 import apex.stellar.antares.service.AuthenticationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.actuate.web.exchanges.HttpExchangeRepository;
 import org.springframework.boot.actuate.web.exchanges.InMemoryHttpExchangeRepository;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,6 +19,8 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -40,17 +44,22 @@ public class ApplicationConfig {
   private final MessageSource messageSource;
 
   /**
-   * Configures the {@link UserDetailsService} bean.
+   * Configures the {@link UserDetailsService} bean with caching support.
    *
-   * <p>This bean tells Spring Security how to load a user by their email address (which serves as
-   * the 'username' in this application).
+   * <p>This bean loads user details by email. It is annotated with {@link Cacheable} to store
+   * results in Redis (cache name "users"), significantly reducing database hits during token
+   * validation and API requests.
    *
    * @return The UserDetailsService implementation.
    */
   @Bean
   public UserDetailsService userDetailsService() {
-    return email ->
-        userRepository
+    return new UserDetailsService() {
+      @Override
+      @Cacheable(value = "users", key = "#email")
+      @NonNull
+      public UserDetails loadUserByUsername(@NonNull String email) {
+        return userRepository
             .findByEmail(email)
             .orElseThrow(
                 () ->
@@ -59,6 +68,8 @@ public class ApplicationConfig {
                             "error.user.not.found.email",
                             new Object[] {email},
                             LocaleContextHolder.getLocale())));
+      }
+    };
   }
 
   /**
@@ -82,11 +93,11 @@ public class ApplicationConfig {
    *
    * @param config The autoconfigured AuthenticationConfiguration.
    * @return The AuthenticationManager.
-   * @throws Exception if the manager cannot be retrieved.
+   * @throws AuthenticationException if the manager cannot be retrieved.
    */
   @Bean
   public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
-      throws Exception {
+      throws AuthenticationException {
     return config.getAuthenticationManager();
   }
 
@@ -114,7 +125,7 @@ public class ApplicationConfig {
       @Value("${application.admin.default-lastname}") String lastName,
       @Value("${application.admin.default-email}") String adminEmail,
       @Value("${application.admin.default-password}") String adminPassword) {
-    return args -> {
+    return ignored -> {
       if (!userRepository.existsByRole(Role.ROLE_ADMIN)) {
         User adminUser =
             User.builder()

@@ -13,7 +13,7 @@ import org.mapstruct.ReportingPolicy;
  *
  * <p>MapStruct generates an implementation of this interface at compile time. The {@code
  * componentModel = "spring"} attribute makes the generated mapper a Spring Bean, allowing it to be
- * injected into services. {@code unmappedTargetPolicy = ReportingPolicy.IGNORE} prevents
+ * injected into services. {@code unmappedTargetPolicy = ReportingPolicy.IGNORE} Prevents
  * compilation errors if not all source fields are mapped to the target (e.g., during partial
  * updates).
  */
@@ -42,7 +42,7 @@ public interface UserMapper {
   /**
    * Updates an existing User entity from a PreferencesUpdateRequest DTO.
    *
-   * @param dto The DTO containing the new preferences data.
+   * @param dto The DTO containing the new preferences' data.
    * @param user The existing User entity to be updated.
    */
   void updateFromPreferences(PreferencesUpdateRequest dto, @MappingTarget User user);

@@ -9,6 +9,8 @@ import apex.stellar.antares.model.User;
 import apex.stellar.antares.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,11 +40,12 @@ public class UserController {
    * @return A ResponseEntity containing the {@link UserResponse} for the current user.
    */
   @GetMapping("/me")
-  public ResponseEntity<UserResponse> getAuthenticatedUser(Authentication authentication) {
+  public ResponseEntity<@NonNull UserResponse> getAuthenticatedUser(Authentication authentication) {
 
-    User currentUser = (User) authentication.getPrincipal();
-
-    return ResponseEntity.ok(userMapper.toUserResponse(currentUser));
+    if (authentication.getPrincipal() instanceof User currentUser) {
+      return ResponseEntity.ok(userMapper.toUserResponse(currentUser));
+    }
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
   }
 
   /**
@@ -53,12 +56,13 @@ public class UserController {
    * @return A ResponseEntity containing the updated {@link UserResponse}.
    */
   @PutMapping("/me/profile")
-  public ResponseEntity<UserResponse> updateProfile(
+  public ResponseEntity<@NonNull UserResponse> updateProfile(
       @Valid @RequestBody ProfileUpdateRequest request, Authentication authentication) {
 
-    User currentUser = (User) authentication.getPrincipal();
-
-    return ResponseEntity.ok(userService.updateProfile(currentUser, request));
+    if (authentication.getPrincipal() instanceof User currentUser) {
+      return ResponseEntity.ok(userService.updateProfile(currentUser, request));
+    }
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
   }
 
   /**
@@ -69,12 +73,13 @@ public class UserController {
    * @return A ResponseEntity containing the updated {@link UserResponse}.
    */
   @PatchMapping("/me/preferences")
-  public ResponseEntity<UserResponse> updatePreferences(
+  public ResponseEntity<@NonNull UserResponse> updatePreferences(
       @Valid @RequestBody PreferencesUpdateRequest request, Authentication authentication) {
 
-    User currentUser = (User) authentication.getPrincipal();
-
-    return ResponseEntity.ok(userService.updatePreferences(currentUser, request));
+    if (authentication.getPrincipal() instanceof User currentUser) {
+      return ResponseEntity.ok(userService.updatePreferences(currentUser, request));
+    }
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
   }
 
   /**
@@ -85,12 +90,13 @@ public class UserController {
    * @return An empty ResponseEntity (200 OK) confirming success.
    */
   @PutMapping("/me/password")
-  public ResponseEntity<Void> changePassword(
+  public ResponseEntity<@NonNull Void> changePassword(
       @Valid @RequestBody ChangePasswordRequest request, Authentication authentication) {
 
-    User currentUser = (User) authentication.getPrincipal();
-    userService.changePassword(request, currentUser);
-
-    return ResponseEntity.ok().build();
+    if (authentication.getPrincipal() instanceof User currentUser) {
+      userService.changePassword(request, currentUser);
+      return ResponseEntity.ok().build();
+    }
+    return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
   }
 }

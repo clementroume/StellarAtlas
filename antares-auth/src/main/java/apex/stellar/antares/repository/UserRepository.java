@@ -4,6 +4,7 @@ import apex.stellar.antares.config.ApplicationConfig;
 import apex.stellar.antares.model.Role;
 import apex.stellar.antares.model.User;
 import java.util.Optional;
+import org.jspecify.annotations.NonNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
@@ -13,7 +14,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * abstracts the database interactions and provides both standard CRUD functionality and
  * custom-defined query methods.
  */
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<@NonNull User, @NonNull Long> {
 
   /**
    * Finds a user by their unique email address.

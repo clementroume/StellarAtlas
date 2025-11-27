@@ -7,6 +7,7 @@ import apex.stellar.antares.dto.RegisterRequest;
 import apex.stellar.antares.dto.TokenRefreshResponse;
 import apex.stellar.antares.dto.UserResponse;
 import apex.stellar.antares.exception.ResourceNotFoundException;
+import apex.stellar.antares.model.Role;
 import apex.stellar.antares.model.User;
 import apex.stellar.antares.service.AuthenticationService;
 import apex.stellar.antares.service.JwtService;
@@ -15,6 +16,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import java.net.URLEncoder;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,6 +40,9 @@ public class AuthenticationController {
   private final AuthenticationService authenticationService;
   private final JwtService jwtService;
 
+  @Value("${application.frontend.login.url}")
+  private String loginBaseUrl;
+
   /**
    * Handles POST requests to register a new user.
    *
@@ -45,7 +51,7 @@ public class AuthenticationController {
    * @return A ResponseEntity with status 201 (Created) and the new {@link UserResponse}.
    */
   @PostMapping("/register")
-  public ResponseEntity<UserResponse> register(
+  public ResponseEntity<@NonNull UserResponse> register(
       @Valid @RequestBody RegisterRequest request, HttpServletResponse response) {
 
     return ResponseEntity.status(HttpStatus.CREATED)
@@ -60,7 +66,7 @@ public class AuthenticationController {
    * @return A ResponseEntity with status 200 (OK) and the authenticated {@link UserResponse}.
    */
   @PostMapping("/login")
-  public ResponseEntity<UserResponse> login(
+  public ResponseEntity<@NonNull UserResponse> login(
       @Valid @RequestBody AuthenticationRequest request, HttpServletResponse response) {
 
     return ResponseEntity.ok(authenticationService.login(request, response));
@@ -74,7 +80,8 @@ public class AuthenticationController {
    * @return A ResponseEntity with status 200 (OK).
    */
   @PostMapping("/logout")
-  public ResponseEntity<Void> logout(Authentication authentication, HttpServletResponse response) {
+  public ResponseEntity<@NonNull Void> logout(
+      Authentication authentication, HttpServletResponse response) {
 
     User currentUser = (User) authentication.getPrincipal();
     authenticationService.logout(currentUser, response);
@@ -97,43 +104,24 @@ public class AuthenticationController {
    * </ol>
    */
   @GetMapping("/verify")
-  public ResponseEntity<Void> verify(HttpServletRequest request, Authentication authentication) {
+  public ResponseEntity<@NonNull Void> verify(
+      HttpServletRequest request, Authentication authentication) {
 
     if (authentication == null || !authentication.isAuthenticated()) {
 
-      String targetUrl = buildLoginRedirectUrl(request);
-
       return ResponseEntity.status(HttpStatus.FOUND)
-          .header(HttpHeaders.LOCATION, targetUrl)
+          .header(HttpHeaders.LOCATION, buildLoginRedirectUrl(request))
           .build();
     }
 
-    User user = (User) authentication.getPrincipal();
+    if (authentication.getPrincipal() instanceof User user) {
 
-    return user.getRole().name().equals("ROLE_ADMIN")
-        ? ResponseEntity.ok().build()
-        : ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-  }
-
-  /**
-   * Helper to construct the Angular login URL with a returnUrl parameter. It uses the X-Forwarded-*
-   * headers provided by Traefik to know where the user came from.
-   */
-  private String buildLoginRedirectUrl(HttpServletRequest request) {
-
-    String loginBaseUrl = "https://stellar.apex/auth/login";
-
-    String proto = request.getHeader("X-Forwarded-Proto");
-    String host = request.getHeader("X-Forwarded-Host");
-    String uri = request.getHeader("X-Forwarded-Uri");
-
-    if (proto != null && host != null) {
-      String originalUrl = proto + "://" + host + (uri != null ? uri : "");
-      String encodedUrl = URLEncoder.encode(originalUrl, UTF_8);
-      return loginBaseUrl + "?returnUrl=" + encodedUrl;
+      return user.getRole() == Role.ROLE_ADMIN
+          ? ResponseEntity.ok().build()
+          : ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
-    return loginBaseUrl;
+    return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
   }
 
   /**
@@ -146,7 +134,7 @@ public class AuthenticationController {
    * @throws ResourceNotFoundException if the refresh token cookie is missing.
    */
   @PostMapping("/refresh-token")
-  public ResponseEntity<TokenRefreshResponse> refreshToken(
+  public ResponseEntity<@NonNull TokenRefreshResponse> refreshToken(
       HttpServletRequest request, HttpServletResponse response) {
 
     String oldRefreshToken =
@@ -157,5 +145,24 @@ public class AuthenticationController {
     }
 
     return ResponseEntity.ok(authenticationService.refreshToken(oldRefreshToken, response));
+  }
+
+  /**
+   * Helper to construct the Angular login URL with a returnUrl parameter. It uses the X-Forwarded-*
+   * headers provided by Traefik to know where the user came from.
+   */
+  private String buildLoginRedirectUrl(HttpServletRequest request) {
+
+    String proto = request.getHeader("X-Forwarded-Proto");
+    String host = request.getHeader("X-Forwarded-Host");
+    String uri = request.getHeader("X-Forwarded-Uri");
+
+    if (proto != null && host != null) {
+      String originalUrl = proto + "://" + host + (uri != null ? uri : "");
+      String encodedUrl = URLEncoder.encode(originalUrl, UTF_8);
+      return loginBaseUrl + "?returnUrl=" + encodedUrl;
+    }
+
+    return loginBaseUrl;
   }
 }
