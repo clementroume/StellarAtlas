@@ -14,7 +14,7 @@ http:
           - "X-Auth-User"
 
     secure-headers:
-      # Applies best-practice security headers to responses.
+      # Applies recommended HTTP security headers.
       headers:
         frameDeny: true                 # Set X-Frame-Options to DENY.
         browserXssFilter: true          # Enable XSS filtering.
@@ -27,16 +27,16 @@ http:
     rate-limit-admin:
       # Rate limiting for administrative endpoints.
       rateLimit:
-        average: 200                     # 200 requests/minute average.
-        period: "1m"
-        burst: 100                       # Allow bursts of 100 requests.
+        average: 200                             # 200 requests/minute average.
+        period: "1m"                             # Time window for rate calculation.
+        burst: 100                               # Allow bursts of up to 100 requests.
 
     rate-limit-api:
       # Rate limiting for public API endpoints.
       rateLimit:
-        average: 100                    # 100 requests/minute average.
-        period: "1m"
-        burst: 50                       # Allow bursts of 50 requests.
+        average: 100                            # 100 requests/minute average.
+        period: "1m"                            # Time window for rate calculation.
+        burst: 50                               # Allow bursts of up to 50 requests.
 
   # ===================================================================
   #  ROUTERS
@@ -44,7 +44,7 @@ http:
   routers:
     # --- 1. Sirius-App Router ---
     sirius-app-router:
-      rule: "Host(`stellar.apex`)"             # Match 'stellar.apex'.
+      rule: "Host(`stellar.apex`)"              # Match 'stellar.apex'.
       entryPoints: [ "websecure" ]              # Use the 'websecure' (HTTPS) entrypoint.
       tls: true                                 # Enable TLS (HTTPS).
       priority: 5                               # Low priority to act as a catch-all for this domain.
@@ -73,12 +73,12 @@ http:
 
     # --- 4. Vega-Admin Router ---
     vega-admin-router:
-      rule: "Host(`admin.stellar.apex`)"       # Match 'admin.stellar.apex'.
+      rule: "Host(`admin.stellar.apex`)"        # Match 'admin.stellar.apex'.
       entryPoints: [ "websecure" ]              # Use the 'websecure' (HTTPS) entrypoint.
       tls: true                                 # Enable TLS (HTTPS).
       service: "vega-admin-service"             # Route to the 'vega-admin' service
-      middlewares: # Middleware declaration
-        - "forward-auth"                           # Secure with Basic Auth.
+      middlewares:
+        - "forward-auth"                        # Secure with Forward Auth.
         - "rate-limit-admin"                    # Secure with rate limiting.
 
     # --- 5. Altair-Proxy Router ---
@@ -87,8 +87,8 @@ http:
       entryPoints: [ "websecure" ]              # Use the 'websecure' (HTTPS) entrypoint.
       tls: true                                 # Enable TLS (HTTPS).
       service: "api@internal"                   # Route to Traefik's internal API/dashboard service.
-      middlewares: # Middleware declaration
-        - "forward-auth"                           # Secure with Basic Auth.
+      middlewares:
+        - "forward-auth"                        # Secure with Forward Auth.
         - "rate-limit-admin"                    # Secure with rate limiting.
 
   # ===================================================================
