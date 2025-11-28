@@ -1,5 +1,9 @@
 name: StellarAtlas CI (monorepo)
 
+permissions:
+  contents: read
+  pull-requests: read
+
 on:
   push:
     branches: [ "main" ]
@@ -90,17 +94,6 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Verify Java & Maven (diagnostic)
-        run: |
-          echo "=== java / javac / mvn versions ==="
-          java -version || true
-          javac -version || true
-          ./mvnw -v || mvn -v || true
-          echo "JAVA_HOME=${JAVA_HOME}"
-          echo "Which java: $(which java || echo 'not found')"
-          echo "Which javac: $(which javac || echo 'not found')"
-          echo "---- End diagnostics ----"
-
       - name: Build & test auth backend
         working-directory: ./antares-auth
         env:
@@ -130,17 +123,6 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
           cache: 'maven'
-
-      - name: Verify Java & Maven (diagnostic)
-        run: |
-          echo "=== java / javac / mvn versions ==="
-          java -version || true
-          javac -version || true
-          ./mvnw -v || mvn -v || true
-          echo "JAVA_HOME=${JAVA_HOME}"
-          echo "Which java: $(which java || echo 'not found')"
-          echo "Which javac: $(which javac || echo 'not found')"
-          echo "---- End diagnostics ----"
 
       - name: Build & test admin backend
         working-directory: ./vega-admin
